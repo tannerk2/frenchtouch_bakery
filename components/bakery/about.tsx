@@ -9,8 +9,8 @@ export function About() {
           <WatercolorWash className="-inset-12 -z-10" />
           <div className="relative aspect-[4/5] overflow-hidden rounded-t-full rounded-b-3xl border-8 border-card">
             <Image
-              src="/images/agathe.png"
-              alt="Agathe Perrier dusting flour over pastry dough in her home kitchen"
+              src="/images/agathe.jpg"
+              alt="Agathe Perrier smiling and holding a freshly baked fruit tart in her bright kitchen"
               fill
               sizes="(min-width: 768px) 40vw, 100vw"
               className="object-cover"
