@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Menu, X } from 'lucide-react'
+import { useOrderLines } from '@/components/order/order-provider'
 import { cn } from '@/lib/utils'
 import { Logo } from './logo'
 
@@ -11,16 +12,18 @@ const NAV_LINKS = [
   { href: '/menu', label: 'Menu' },
   { href: '/about', label: 'About' },
   { href: '/gallery', label: 'Gallery' },
-  { href: '/how-to-order', label: 'How to Order' },
   { href: '/events', label: 'Events' },
-  { href: '/#contact', label: 'Contact' },
 ]
+
+// On desktop the Order button sits beside these links; the mobile menu lists it at the end.
+const MOBILE_LINKS = [...NAV_LINKS, { href: '/order', label: 'Order' }]
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
   const close = () => setOpen(false)
-  const isActive = (href: string) => !href.startsWith('/#') && pathname === href
+  const isActive = (href: string) => pathname === href
+  const orderCount = useOrderLines()?.length ?? 0
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/70 bg-background/90 backdrop-blur-md">
@@ -52,10 +55,17 @@ export function SiteHeader() {
 
         <div className="flex shrink-0 items-center gap-2">
           <Link
-            href="/#contact"
-            className="hidden h-10 items-center rounded-full bg-primary px-5 text-base font-semibold text-primary-foreground transition-opacity hover:opacity-90 sm:inline-flex"
+            href="/order"
+            aria-current={isActive('/order') ? 'page' : undefined}
+            className="hidden h-10 items-center gap-2 rounded-full bg-primary px-5 text-base font-semibold text-primary-foreground transition-opacity hover:opacity-90 sm:inline-flex"
           >
             Order
+            {orderCount ? (
+              <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-primary-foreground px-1.5 text-sm text-primary">
+                {orderCount}
+                <span className="sr-only"> item{orderCount === 1 ? '' : 's'} picked</span>
+              </span>
+            ) : null}
           </Link>
           <button
             type="button"
@@ -83,7 +93,7 @@ export function SiteHeader() {
                 Home
               </Link>
             </li>
-            {NAV_LINKS.map((link) => (
+            {MOBILE_LINKS.map((link) => (
               <li key={link.href}>
                 <Link
                   href={link.href}

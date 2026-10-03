@@ -215,7 +215,7 @@ function MenuItemForm({
             <Input
               id={`${prefix}-price`}
               required
-              placeholder="from $28"
+              placeholder="$28 or $14 / dozen"
               value={item.price}
               onChange={(e) => update({ price: e.target.value })}
               className="bg-card text-base"

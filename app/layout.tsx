@@ -3,6 +3,8 @@ import { Cormorant_Garamond, Parisienne } from 'next/font/google'
 import { PublicOnly } from '@/components/bakery/public-only'
 import { SiteFooter } from '@/components/bakery/site-footer'
 import { SiteHeader } from '@/components/bakery/site-header'
+import { OrderBar } from '@/components/order/order-bar'
+import { OrderProvider } from '@/components/order/order-provider'
 import { SiteDataProvider } from '@/components/site-data-provider'
 import { Toaster } from '@/components/ui/sonner'
 import './globals.css'
@@ -64,13 +66,16 @@ export default function RootLayout({
           Skip to content
         </a>
         <SiteDataProvider>
-          <PublicOnly>
-            <SiteHeader />
-          </PublicOnly>
-          <main id="main">{children}</main>
-          <PublicOnly>
-            <SiteFooter />
-          </PublicOnly>
+          <OrderProvider>
+            <PublicOnly>
+              <SiteHeader />
+            </PublicOnly>
+            <main id="main">{children}</main>
+            <PublicOnly>
+              <SiteFooter />
+              <OrderBar />
+            </PublicOnly>
+          </OrderProvider>
         </SiteDataProvider>
         <Toaster position="bottom-center" />
       </body>

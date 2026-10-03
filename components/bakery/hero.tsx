@@ -27,12 +27,12 @@ export function Hero() {
             kitchen with the recipes she grew up with in France.
           </p>
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-            <a
-              href="#contact"
+            <Link
+              href="/order"
               className="inline-flex h-12 items-center justify-center rounded-full bg-primary px-8 text-lg font-semibold text-primary-foreground transition-opacity hover:opacity-90"
             >
               Place an Order
-            </a>
+            </Link>
             <Link
               href="/menu"
               className="inline-flex h-12 items-center justify-center rounded-full border border-primary/30 bg-card px-8 text-lg font-semibold text-foreground transition-colors hover:bg-blush"

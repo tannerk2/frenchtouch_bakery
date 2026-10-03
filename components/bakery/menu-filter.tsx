@@ -2,6 +2,9 @@
 
 import { useId, useRef, useState, type KeyboardEvent } from 'react'
 import Image from 'next/image'
+import { Check, Plus } from 'lucide-react'
+import { FlavorChips } from '@/components/order/flavor-chips'
+import { useOrder } from '@/components/order/order-provider'
 import { useSiteData } from '@/components/site-data-provider'
 import { MENU_GROUPS } from '@/lib/site-data'
 import { cn } from '@/lib/utils'
@@ -9,6 +12,7 @@ import { ContentLoading } from './content-loading'
 
 export function MenuFilter() {
   const { menu, status } = useSiteData()
+  const order = useOrder()
   const groups = MENU_GROUPS.map((group) => ({
     ...group,
     items: status === 'loading' ? [] : menu.filter((item) => item.group === group.key),
@@ -77,11 +81,16 @@ export function MenuFilter() {
           <p className="py-10 text-center text-lg text-muted-foreground">New items are coming soon.</p>
         ) : null}
         <ul key={active.key} className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {active.items.map((item, index) => (
+          {active.items.map((item, index) => {
+            const selection = order.selections.find((entry) => entry.itemId === item.id)
+            return (
             <li
               key={item.id}
               style={{ animationDelay: `${index * 70}ms` }}
-              className="flex flex-col overflow-hidden rounded-3xl border border-border bg-card animate-in fade-in slide-in-from-bottom-2 fill-mode-both duration-500 motion-reduce:animate-none"
+              className={cn(
+                'flex flex-col overflow-hidden rounded-3xl border border-border bg-card animate-in fade-in slide-in-from-bottom-2 fill-mode-both duration-500 motion-reduce:animate-none',
+                selection && 'ring-2 ring-rouge/60',
+              )}
             >
               <div className="relative aspect-[4/3] overflow-hidden">
                 <Image
@@ -95,17 +104,43 @@ export function MenuFilter() {
               <div className="flex flex-1 flex-col gap-3 p-6">
                 <h3 className="text-2xl font-semibold leading-snug">{item.name}</h3>
                 <p className="leading-relaxed text-muted-foreground">{item.description}</p>
-                <ul className="flex flex-wrap gap-2" aria-label={`Examples of ${item.name}`}>
-                  {item.examples.map((example) => (
-                    <li key={example} className="rounded-full bg-blush/50 px-3 py-1 text-sm font-medium">
-                      {example}
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-auto pt-2 text-lg font-semibold italic">{item.price}</p>
+                {item.examples.length ? (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-sm text-muted-foreground">Tap to choose flavors</p>
+                    <FlavorChips item={item} chosen={selection?.flavors ?? []} />
+                  </div>
+                ) : null}
+                <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-2">
+                  <p className="text-lg font-semibold italic">{item.price}</p>
+                  {selection ? (
+                    <p className="flex items-center gap-2 text-base">
+                      <span className="inline-flex items-center gap-1 font-semibold text-rouge">
+                        <Check className="size-4" aria-hidden="true" />
+                        In your order
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => order.remove(item.id)}
+                        className="rounded-full px-2 py-1 text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                      >
+                        Remove<span className="sr-only"> {item.name}</span>
+                      </button>
+                    </p>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => order.add(item.id)}
+                      className="inline-flex h-10 items-center gap-1.5 rounded-full border border-primary/30 bg-card px-4 text-base font-semibold transition-colors hover:bg-blush"
+                    >
+                      <Plus className="size-4" aria-hidden="true" />
+                      Add to order<span className="sr-only">: {item.name}</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </li>
-          ))}
+            )
+          })}
         </ul>
       </div>
     </div>

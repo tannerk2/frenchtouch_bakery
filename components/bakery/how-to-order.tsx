@@ -1,16 +1,17 @@
-import { CalendarHeart, MapPin, MessageCircleHeart, Clock, Info } from 'lucide-react'
+import Link from 'next/link'
+import { MapPin, MessageCircleHeart, ShoppingBasket } from 'lucide-react'
 import { SectionHeading } from './ornaments'
 
 const STEPS = [
   {
-    icon: MessageCircleHeart,
-    title: 'Reach out',
-    body: 'Send a message through the form below, call or text, or DM on Instagram or Facebook with what you have in mind.',
+    icon: ShoppingBasket,
+    title: 'Pick your treats',
+    body: 'Browse the menu, tap the flavors you love and add them to your order.',
   },
   {
-    icon: CalendarHeart,
-    title: 'Confirm details & pickup date',
-    body: 'We’ll settle flavors, sizes, quantities and price together, then lock in your pickup day and time.',
+    icon: MessageCircleHeart,
+    title: 'Send your request',
+    body: 'Choose a pickup date and send it over. Nothing is charged online: Agathe confirms your order, total and pickup time by email or text.',
   },
   {
     icon: MapPin,
@@ -21,9 +22,9 @@ const STEPS = [
 
 export function HowToOrder() {
   return (
-    <section id="how-to-order" aria-labelledby="order-title" className="py-20 md:py-28">
+    <section id="how-to-order" aria-labelledby="how-to-order-title" className="bg-muted/60 py-20 md:py-28">
       <div className="mx-auto flex max-w-6xl flex-col gap-12 px-4 md:px-6">
-        <SectionHeading id="order-title" eyebrow="Simple as un, deux, trois" title="How to Order" />
+        <SectionHeading id="how-to-order-title" eyebrow="Simple as un, deux, trois" title="How to Order" />
 
         <ol className="grid gap-6 md:grid-cols-3">
           {STEPS.map((step, index) => (
@@ -43,21 +44,19 @@ export function HowToOrder() {
           ))}
         </ol>
 
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 rounded-3xl bg-sage/30 p-6 sm:flex-row sm:gap-8 md:p-8">
-          <p className="flex flex-1 items-start gap-3 leading-relaxed">
-            <Clock className="mt-1 size-5 shrink-0" aria-hidden="true" />
-            <span>
-              <strong className="font-semibold">Please allow 48–72 hours notice</strong> for most orders. Larger
-              celebration cakes may need a little more.
-            </span>
-          </p>
-          <p className="flex flex-1 items-start gap-3 leading-relaxed">
-            <Info className="mt-1 size-5 shrink-0" aria-hidden="true" />
-            <span>
-              <strong className="font-semibold">Allergen information is available on request.</strong> Everything is
-              made in a home kitchen that uses nuts, dairy, eggs and wheat.
-            </span>
-          </p>
+        <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <Link
+            href="/menu"
+            className="inline-flex h-12 items-center justify-center rounded-full bg-primary px-8 text-lg font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+          >
+            Browse the menu
+          </Link>
+          <Link
+            href="/order"
+            className="inline-flex h-12 items-center justify-center rounded-full border border-primary/30 bg-card px-8 text-lg font-semibold text-foreground transition-colors hover:bg-blush"
+          >
+            Go to your order
+          </Link>
         </div>
       </div>
     </section>
