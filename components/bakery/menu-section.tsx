@@ -9,7 +9,7 @@ export function MenuSection() {
           id="menu-title"
           eyebrow="What we make"
           title="La Carte"
-          intro="Everything is baked to order in small batches. Tap the flavors you love to add them to your order, then choose quantities and send it from the Order page."
+          intro="Everything is baked to order in small batches. Add what you'd like to your order, then choose flavors and quantities on the Order page."
         />
 
         <MenuFilter />

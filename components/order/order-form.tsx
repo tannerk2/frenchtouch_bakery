@@ -3,13 +3,14 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Plus, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { toast } from 'sonner'
 import { EMAIL, PHONE_DISPLAY } from '@/components/bakery/social'
 import { ContentLoading } from '@/components/bakery/content-loading'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { cn } from '@/lib/utils'
 import { useOrder, useOrderLines, type OrderLine } from './order-provider'
 import { QuantityStepper } from './quantity-stepper'
 
@@ -49,8 +50,9 @@ function checkPickupDate(input: HTMLInputElement) {
 }
 
 function describeLine({ item, quantity, flavors }: OrderLine) {
-  return flavors.length
-    ? `${item.name} (${item.price}): ${flavors.map((flavor) => `${flavor.quantity} × ${flavor.name}`).join(', ')}`
+  const chosen = flavors.filter((flavor) => flavor.quantity > 0)
+  return chosen.length
+    ? `${item.name} (${item.price}): ${chosen.map((flavor) => `${flavor.quantity} × ${flavor.name}`).join(', ')}`
     : `${quantity} × ${item.name} (${item.price})`
 }
 
@@ -58,6 +60,8 @@ export function OrderForm() {
   const order = useOrder()
   const lines = useOrderLines()
   const [submitting, setSubmitting] = useState(false)
+  // Flavor errors only show after a send attempt, not while the visitor is still choosing.
+  const [showFlavorErrors, setShowFlavorErrors] = useState(false)
   // Set after mount: the page is pre-built, so a date computed during the build would be stale.
   const [minDate, setMinDate] = useState<string>()
 
@@ -68,6 +72,12 @@ export function OrderForm() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = event.currentTarget
+    const missingFlavors = lines?.filter((line) => line.needsFlavor) ?? []
+    if (missingFlavors.length) {
+      setShowFlavorErrors(true)
+      document.getElementById(lineId(missingFlavors[0]))?.focus()
+      return
+    }
     // Re-checked on send in case the page has been open long enough for the earliest date to move.
     const dateInput = form.elements.namedItem('pickupDate') as HTMLInputElement
     checkPickupDate(dateInput)
@@ -121,7 +131,7 @@ export function OrderForm() {
         {lines === null ? <ContentLoading className="min-h-24" /> : null}
         {lines?.length === 0 ? (
           <p className="rounded-2xl bg-muted/60 px-5 py-4 text-base leading-relaxed">
-            Nothing picked yet.{' '}
+            Nothing added yet.{' '}
             <Link href="/menu" className="font-semibold underline underline-offset-4">
               Browse the menu
             </Link>{' '}
@@ -130,9 +140,9 @@ export function OrderForm() {
         ) : null}
         {lines?.length ? (
           <>
-            <ul className="flex flex-col divide-y divide-border rounded-2xl border border-border">
+            <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border">
               {lines.map((line) => (
-                <OrderLineRow key={line.item.id} line={line} />
+                <OrderLineRow key={line.item.id} line={line} showError={showFlavorErrors && line.needsFlavor} />
               ))}
             </ul>
             <Link href="/menu" className="self-start text-base font-semibold underline underline-offset-4">
@@ -212,13 +222,20 @@ export function OrderForm() {
   )
 }
 
-function OrderLineRow({ line }: { line: OrderLine }) {
+const lineId = (line: OrderLine) => `order-line-${line.item.id}`
+
+function OrderLineRow({ line, showError }: { line: OrderLine; showError: boolean }) {
   const { remove, setQuantity, setFlavorQuantity } = useOrder()
   const { item, quantity, flavors } = line
-  const unchosen = item.flavors.filter((name) => !flavors.some((flavor) => flavor.name === name))
+  const hintId = `${lineId(line)}-hint`
 
   return (
-    <li className="flex flex-col gap-3 p-4">
+    <li
+      id={lineId(line)}
+      tabIndex={-1}
+      aria-describedby={flavors.length ? hintId : undefined}
+      className={cn('flex scroll-mt-28 flex-col gap-3 p-4 outline-none', showError && 'bg-destructive/5')}
+    >
       <div className="flex items-start gap-4">
         <div className="relative size-16 shrink-0 overflow-hidden rounded-xl bg-muted">
           <Image src={item.image} alt="" fill sizes="64px" className="object-cover" />
@@ -239,46 +256,35 @@ function OrderLineRow({ line }: { line: OrderLine }) {
 
       {/* Full width on phones so flavor names don't wrap; lined up under the name on wider screens. */}
       <div className="flex flex-col gap-3 sm:pl-20">
-
         {flavors.length ? (
-          <ul className="flex flex-col gap-2">
-            {flavors.map((flavor) => (
-              <li key={flavor.name} className="flex items-center justify-between gap-3">
-                <span className="min-w-0 text-base">{flavor.name}</span>
-                <QuantityStepper
-                  label={`${flavor.name} (${item.name})`}
-                  value={flavor.quantity}
-                  onChange={(next) => setFlavorQuantity(item.id, flavor.name, next)}
-                />
-              </li>
-            ))}
-          </ul>
+          <>
+            <p
+              id={hintId}
+              role={showError ? 'alert' : undefined}
+              className={cn('text-sm', showError ? 'font-semibold text-destructive' : 'text-muted-foreground')}
+            >
+              {showError ? 'Please choose at least one flavor.' : 'Choose your flavors and how many of each.'}
+            </p>
+            <ul className="flex flex-col gap-2">
+              {flavors.map((flavor) => (
+                <li key={flavor.name} className="flex items-center justify-between gap-3">
+                  <span className={cn('min-w-0 text-base', flavor.quantity > 0 && 'font-semibold')}>{flavor.name}</span>
+                  <QuantityStepper
+                    label={`${flavor.name} (${item.name})`}
+                    value={flavor.quantity}
+                    min={0}
+                    onChange={(next) => setFlavorQuantity(item.id, flavor.name, next)}
+                  />
+                </li>
+              ))}
+            </ul>
+          </>
         ) : (
           <div className="flex items-center justify-between gap-3">
             <span className="text-base text-muted-foreground">Quantity</span>
-            <QuantityStepper label={item.name} value={quantity} onChange={(next) => setQuantity(item.id, next)} />
+            <QuantityStepper label={item.name} value={quantity} min={1} onChange={(next) => setQuantity(item.id, next)} />
           </div>
         )}
-
-        {unchosen.length ? (
-          <div className="flex flex-col gap-2">
-            <p className="text-sm text-muted-foreground">Add another flavor</p>
-            <div className="flex flex-wrap gap-2">
-              {unchosen.map((name) => (
-                <button
-                  key={name}
-                  type="button"
-                  onClick={() => setFlavorQuantity(item.id, name, 1)}
-                  className="inline-flex min-h-8 items-center gap-1 rounded-full border border-dashed border-rouge/50 px-3 py-1 text-sm font-medium transition-colors hover:bg-blush/50"
-                >
-                  <Plus className="size-3.5" aria-hidden="true" />
-                  {name}
-                  <span className="sr-only"> ({item.name})</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : null}
       </div>
     </li>
   )

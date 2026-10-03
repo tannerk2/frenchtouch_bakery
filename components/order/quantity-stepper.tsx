@@ -1,28 +1,38 @@
 'use client'
 
-import { Minus, Plus, Trash2 } from 'lucide-react'
+import { Minus, Plus } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { MAX_QUANTITY } from './order-provider'
 
-// − n + control. At 1, the minus becomes a remove button (going to 0 takes the line out of the order).
+// − n + control. Items are removed with their own ✕, so the stepper never goes below `min`.
 export function QuantityStepper({
   label,
   value,
+  min,
   onChange,
 }: {
   label: string
   value: number
+  min: number
   onChange: (quantity: number) => void
 }) {
-  const removes = value <= 1
   return (
-    <div role="group" aria-label={`Quantity of ${label}`} className="inline-flex shrink-0 items-center rounded-full border border-border bg-card">
+    <div
+      role="group"
+      aria-label={`Quantity of ${label}`}
+      className={cn(
+        'inline-flex shrink-0 items-center rounded-full border bg-card',
+        value > 0 ? 'border-rouge/60' : 'border-border',
+      )}
+    >
       <button
         type="button"
         onClick={() => onChange(value - 1)}
-        className="inline-flex size-9 items-center justify-center rounded-full hover:bg-muted"
+        disabled={value <= min}
+        className="inline-flex size-9 items-center justify-center rounded-full hover:bg-muted disabled:opacity-40"
       >
-        {removes ? <Trash2 className="size-4" aria-hidden="true" /> : <Minus className="size-4" aria-hidden="true" />}
-        <span className="sr-only">{removes ? `Remove ${label}` : `One fewer ${label}`}</span>
+        <Minus className="size-4" aria-hidden="true" />
+        <span className="sr-only">One fewer {label}</span>
       </button>
       <output aria-live="polite" className="w-8 text-center text-base font-semibold">
         {value}

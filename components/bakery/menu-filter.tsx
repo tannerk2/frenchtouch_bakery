@@ -3,7 +3,6 @@
 import { useId, useRef, useState, type KeyboardEvent } from 'react'
 import Image from 'next/image'
 import { Check, Plus } from 'lucide-react'
-import { FlavorChips } from '@/components/order/flavor-chips'
 import { useOrder, useOrderLines } from '@/components/order/order-provider'
 import { useSiteData } from '@/components/site-data-provider'
 import { MENU_GROUPS } from '@/lib/site-data'
@@ -83,7 +82,6 @@ export function MenuFilter() {
         ) : null}
         <ul key={active.key} className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {active.items.map((item, index) => {
-            const selection = order.selections.find((entry) => entry.itemId === item.id)
             const inOrder = Boolean(lines?.some((line) => line.item.id === item.id))
             return (
             <li
@@ -107,10 +105,13 @@ export function MenuFilter() {
                 <h3 className="text-2xl font-semibold leading-snug">{item.name}</h3>
                 <p className="leading-relaxed text-muted-foreground">{item.description}</p>
                 {item.flavors.length ? (
-                  <div className="flex flex-col gap-2">
-                    <p className="text-sm text-muted-foreground">Tap a flavor to add it to your order</p>
-                    <FlavorChips item={item} chosen={selection?.flavors ?? {}} />
-                  </div>
+                  <ul className="flex flex-wrap gap-2" aria-label={`Flavors of ${item.name}`}>
+                    {item.flavors.map((flavor) => (
+                      <li key={flavor} className="rounded-full bg-blush/50 px-3 py-1 text-sm font-medium">
+                        {flavor}
+                      </li>
+                    ))}
+                  </ul>
                 ) : null}
                 <div className="mt-auto flex min-h-10 flex-wrap items-center justify-between gap-3 pt-2">
                   <p className="text-lg font-semibold italic">{item.price}</p>
@@ -128,11 +129,11 @@ export function MenuFilter() {
                         Remove<span className="sr-only"> {item.name}</span>
                       </button>
                     </p>
-                  ) : item.flavors.length ? null : (
+                  ) : (
                     <button
                       type="button"
                       onClick={() => order.add(item.id)}
-                      className="inline-flex h-10 items-center gap-1.5 rounded-full border border-primary/30 bg-card px-4 text-base font-semibold transition-colors hover:bg-blush"
+                      className="inline-flex h-11 items-center gap-1.5 rounded-full bg-primary px-5 text-base font-semibold text-primary-foreground transition-opacity hover:opacity-90"
                     >
                       <Plus className="size-4" aria-hidden="true" />
                       Add to order<span className="sr-only">: {item.name}</span>

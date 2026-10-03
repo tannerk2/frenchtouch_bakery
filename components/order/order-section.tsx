@@ -26,7 +26,7 @@ export function OrderSection() {
           id="order-page-title"
           eyebrow="Place an order"
           title="Votre Commande"
-          intro="Check your picks, choose a pickup date and send it over. Agathe will reply within a day or two to confirm."
+          intro="Choose flavors and quantities, pick a date and send it over. Agathe will reply within a day or two to confirm."
         />
 
         <div className="grid items-start gap-8 lg:grid-cols-[1.6fr_1fr]">

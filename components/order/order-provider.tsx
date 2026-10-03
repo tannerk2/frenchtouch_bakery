@@ -4,17 +4,19 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { useSiteData } from '@/components/site-data-provider'
 import type { MenuItem } from '@/lib/site-data'
 
-// What a visitor has picked from the menu, kept in their browser so it survives moving between pages.
+// What a visitor has added from the menu, kept in their browser so it survives moving between pages.
 // It is a request list, not a cart: Agathe confirms the order and total by reply.
-// Items with flavors are ordered per flavor (`flavors`: name -> quantity); items without use `quantity`.
+// Items are added from the menu; flavors and quantities are chosen on the Order page. Items with flavors
+// are ordered per flavor (`flavors`: name -> quantity); items without use `quantity`.
 export type OrderSelection = { itemId: string; quantity: number; flavors: Record<string, number> }
 
 export type OrderLine = {
   item: MenuItem
   quantity: number
-  // Chosen flavors in the order Agathe listed them on the menu.
+  // Every flavor Agathe offers for the item, in her order, with how many the visitor wants (0 = none).
   flavors: { name: string; quantity: number }[]
-  count: number
+  // An item with flavors can't be sent until at least one flavor has a quantity.
+  needsFlavor: boolean
 }
 
 type OrderState = {
@@ -30,7 +32,7 @@ type OrderState = {
 const STORAGE_KEY = 'ftb-order-v2'
 export const MAX_QUANTITY = 99
 
-const clamp = (quantity: number) => Math.min(MAX_QUANTITY, Math.max(0, Math.round(quantity)))
+const clamp = (quantity: number, min: number) => Math.min(MAX_QUANTITY, Math.max(min, Math.round(quantity)))
 
 const OrderContext = createContext<OrderState | null>(null)
 
@@ -70,27 +72,22 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   }, [ready, selections])
 
   const value = useMemo<OrderState>(() => {
-    const upsert = (itemId: string, change: (selection: OrderSelection) => OrderSelection | null) =>
-      setSelections((list) => {
-        const existing = list.find((entry) => entry.itemId === itemId) ?? { itemId, quantity: 0, flavors: {} }
-        const next = change(existing)
-        const others = list.filter((entry) => entry.itemId !== itemId)
-        if (!next || (next.quantity === 0 && Object.keys(next.flavors).length === 0)) return others
-        return list.some((entry) => entry.itemId === itemId)
-          ? list.map((entry) => (entry.itemId === itemId ? next : entry))
-          : [...list, next]
-      })
+    const update = (itemId: string, change: (selection: OrderSelection) => OrderSelection) =>
+      setSelections((list) => list.map((entry) => (entry.itemId === itemId ? change(entry) : entry)))
     return {
       ready,
       selections,
-      add: (itemId) => upsert(itemId, (entry) => ({ ...entry, quantity: Math.max(1, entry.quantity) })),
-      remove: (itemId) => upsert(itemId, () => null),
-      setQuantity: (itemId, quantity) => upsert(itemId, (entry) => ({ ...entry, quantity: clamp(quantity) })),
-      // A quantity of 0 removes the flavor; removing the last flavor removes the item.
+      add: (itemId) =>
+        setSelections((list) =>
+          list.some((entry) => entry.itemId === itemId) ? list : [...list, { itemId, quantity: 1, flavors: {} }],
+        ),
+      remove: (itemId) => setSelections((list) => list.filter((entry) => entry.itemId !== itemId)),
+      setQuantity: (itemId, quantity) => update(itemId, (entry) => ({ ...entry, quantity: clamp(quantity, 1) })),
       setFlavorQuantity: (itemId, flavor, quantity) =>
-        upsert(itemId, (entry) => {
+        update(itemId, (entry) => {
           const { [flavor]: _previous, ...flavors } = entry.flavors
-          return { ...entry, flavors: clamp(quantity) > 0 ? { ...flavors, [flavor]: clamp(quantity) } : flavors }
+          const next = clamp(quantity, 0)
+          return { ...entry, flavors: next > 0 ? { ...flavors, [flavor]: next } : flavors }
         }),
       clear: () => setSelections([]),
     }
@@ -105,8 +102,8 @@ export function useOrder() {
   return context
 }
 
-// Selections joined with the current menu, so whatever Agathe changes in the admin wins: removed items and
-// renamed flavors drop out. Returns null until both the saved selections and the live menu have loaded.
+// Selections joined with the current menu, so whatever Agathe changes in the admin wins: removed items drop
+// out and flavors always match her list. Returns null until both the saved order and the live menu have loaded.
 export function useOrderLines(): OrderLine[] | null {
   const { ready, selections } = useOrder()
   const { menu, status } = useSiteData()
@@ -115,17 +112,18 @@ export function useOrderLines(): OrderLine[] | null {
     return selections.flatMap((selection): OrderLine[] => {
       const item = menu.find((entry) => entry.id === selection.itemId)
       if (!item) return []
-      if (item.flavors.length === 0) {
-        const quantity = Math.max(1, selection.quantity)
-        return [{ item, quantity, flavors: [], count: quantity }]
-      }
-      const flavors = item.flavors
-        .filter((name) => selection.flavors[name])
-        .map((name) => ({ name, quantity: selection.flavors[name] }))
-      if (flavors.length === 0) return []
-      return [{ item, quantity: 0, flavors, count: flavors.reduce((sum, flavor) => sum + flavor.quantity, 0) }]
+      const flavors = item.flavors.map((name) => ({ name, quantity: selection.flavors[name] ?? 0 }))
+      return [
+        {
+          item,
+          quantity: Math.max(1, selection.quantity),
+          flavors,
+          needsFlavor: flavors.length > 0 && flavors.every((flavor) => flavor.quantity === 0),
+        },
+      ]
     })
   }, [ready, selections, menu, status])
 }
 
-export const orderCount = (lines: OrderLine[] | null) => lines?.reduce((sum, line) => sum + line.count, 0) ?? 0
+// Number of menu items in the order (quantities are chosen on the Order page).
+export const orderCount = (lines: OrderLine[] | null) => lines?.length ?? 0

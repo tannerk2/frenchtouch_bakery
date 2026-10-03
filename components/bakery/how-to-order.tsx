@@ -6,12 +6,12 @@ const STEPS = [
   {
     icon: ShoppingBasket,
     title: 'Pick your treats',
-    body: 'Browse the menu, tap the flavors you love and add them to your order.',
+    body: 'Browse the menu and tap Add to order on anything that catches your eye.',
   },
   {
     icon: MessageCircleHeart,
     title: 'Send your request',
-    body: 'Choose a pickup date and send it over. Nothing is charged online: Agathe confirms your order, total and pickup time by email or text.',
+    body: 'Choose flavors, quantities and a pickup date, then send it over. Nothing is charged online: Agathe confirms your order, total and pickup time by email or text.',
   },
   {
     icon: MapPin,
