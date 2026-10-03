@@ -7,6 +7,7 @@ import { X } from 'lucide-react'
 import { toast } from 'sonner'
 import { EMAIL, PHONE_DISPLAY } from '@/components/bakery/social'
 import { ContentLoading } from '@/components/bakery/content-loading'
+import { FoodDisclaimer } from '@/components/bakery/food-disclaimer'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -207,6 +208,8 @@ export function OrderForm() {
       </div>
 
       <div className="flex flex-col gap-3">
+        {/* Shown right before sending so every customer sees it at the point of sale. */}
+        <FoodDisclaimer className="rounded-2xl bg-muted/60 px-4 py-3 text-foreground" />
         <button
           type="submit"
           disabled={submitting}
