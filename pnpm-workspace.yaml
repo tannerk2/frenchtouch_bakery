@@ -1,0 +1,12 @@
+packages:
+  - infra
+
+pmOnFail: ignore
+
+minimumReleaseAgeExclude:
+  - '@next/*'
+  - next
+
+# esbuild (used by tsx in infra/) ships its binary as an optional dependency; its install script isn't needed.
+allowBuilds:
+  esbuild: false
