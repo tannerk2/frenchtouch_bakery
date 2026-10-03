@@ -2,7 +2,7 @@
   "app": "npx tsx bin/app.ts",
   "context": {
     "domainName": "frenchtouch-bakery.com",
-    "useDomain": false,
+    "useDomain": true,
     "@aws-cdk/core:defaultCrossStackReferences": "strong"
   }
 }
