@@ -25,17 +25,16 @@ export const metadata: Metadata = {
   title: 'French Touch Bakery | French Cakes & Pastries in Meridian, Idaho',
   description:
     'French-inspired cakes, tarts, madeleines and pastries made by hand to order by Agathe Perrier in Meridian, Idaho. Order for pickup or find us at local markets.',
-  generator: 'v0.app',
   openGraph: {
     title: 'French Touch Bakery',
     description: 'French-inspired cakes & pastries, made by hand in Meridian.',
     images: ['/images/hero-tart.png'],
   },
+  // Tab icons use the cake from the logo (the lettering is unreadable at 16-48px); iOS gets the full logo.
   icons: {
     icon: [
-      { url: '/icon-light-32x32.png', media: '(prefers-color-scheme: light)' },
-      { url: '/icon-dark-32x32.png', media: '(prefers-color-scheme: dark)' },
-      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: '16x16 32x32 48x48' },
+      { url: '/icon.png', type: 'image/png', sizes: '192x192' },
     ],
     apple: '/apple-icon.png',
   },
