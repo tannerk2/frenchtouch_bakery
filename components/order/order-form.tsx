@@ -1,17 +1,17 @@
 'use client'
 
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Minus, Plus, X } from 'lucide-react'
+import { Plus, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { EMAIL, PHONE_DISPLAY } from '@/components/bakery/social'
 import { ContentLoading } from '@/components/bakery/content-loading'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { FlavorChips } from './flavor-chips'
-import { MAX_QUANTITY, useOrder, useOrderLines, type OrderLine } from './order-provider'
+import { useOrder, useOrderLines, type OrderLine } from './order-provider'
+import { QuantityStepper } from './quantity-stepper'
 
 const fieldClass = 'h-12 rounded-xl bg-background text-base'
 
@@ -23,19 +23,35 @@ const ignorePasswordManagers = { 'data-lpignore': 'true', 'data-1p-ignore': 'tru
 // Field names are sent as-is and become the labels in that email; `email` is used as the Reply-To.
 const WEB3FORMS_KEY = process.env.NEXT_PUBLIC_WEB3FORMS_KEY
 
-// Most orders need 48–72 hours, so the date picker starts two days out.
-const NOTICE_DAYS = 2
+// Orders need 48 hours' notice. The earliest pickup day is the day that notice runs out; Agathe arranges
+// the time when she confirms.
+const NOTICE_HOURS = 48
 
-const PICKUP_DATE_FORMAT = new Intl.DateTimeFormat('en-US', {
-  weekday: 'long',
-  month: 'long',
-  day: 'numeric',
-  year: 'numeric',
-  timeZone: 'UTC',
-})
+const earliestPickupDate = () => new Date(Date.now() + NOTICE_HOURS * 60 * 60 * 1000).toLocaleDateString('en-CA')
 
-function describeLine({ item, flavors, quantity }: OrderLine) {
-  return `${quantity} × ${item.name} (${item.price})${flavors.length ? `: ${flavors.join(', ')}` : ''}`
+const formatDay = (isoDate: string, year: boolean) =>
+  new Intl.DateTimeFormat('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    ...(year ? { year: 'numeric' } : {}),
+    timeZone: 'UTC',
+  }).format(new Date(`${isoDate}T00:00:00Z`))
+
+// The date picker's min isn't enforced by every phone browser, so the rule is also checked here.
+function checkPickupDate(input: HTMLInputElement) {
+  const earliest = earliestPickupDate()
+  input.setCustomValidity(
+    input.value && input.value < earliest
+      ? `Please choose ${formatDay(earliest, false)} or later. Orders need at least 48 hours' notice.`
+      : '',
+  )
+}
+
+function describeLine({ item, quantity, flavors }: OrderLine) {
+  return flavors.length
+    ? `${item.name} (${item.price}): ${flavors.map((flavor) => `${flavor.quantity} × ${flavor.name}`).join(', ')}`
+    : `${quantity} × ${item.name} (${item.price})`
 }
 
 export function OrderForm() {
@@ -46,14 +62,16 @@ export function OrderForm() {
   const [minDate, setMinDate] = useState<string>()
 
   useEffect(() => {
-    const earliest = new Date()
-    earliest.setDate(earliest.getDate() + NOTICE_DAYS)
-    setMinDate(earliest.toLocaleDateString('en-CA'))
+    setMinDate(earliestPickupDate())
   }, [])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = event.currentTarget
+    // Re-checked on send in case the page has been open long enough for the earliest date to move.
+    const dateInput = form.elements.namedItem('pickupDate') as HTMLInputElement
+    checkPickupDate(dateInput)
+    if (!dateInput.reportValidity()) return
     const fields = new FormData(form)
     const field = (name: string) => String(fields.get(name) ?? '').trim()
     const name = field('name')
@@ -68,7 +86,7 @@ export function OrderForm() {
     data.append('name', name)
     data.append('email', field('email'))
     data.append('Order', lines?.length ? lines.map(describeLine).join('\n') : 'Nothing picked from the menu (see notes)')
-    data.append('Pickup date', pickupDate ? PICKUP_DATE_FORMAT.format(new Date(`${pickupDate}T00:00:00Z`)) : '')
+    data.append('Desired pickup date', pickupDate ? formatDay(pickupDate, true) : '')
     data.append('Phone', field('phone'))
     data.append('Notes', field('notes'))
 
@@ -114,7 +132,7 @@ export function OrderForm() {
           <>
             <ul className="flex flex-col divide-y divide-border rounded-2xl border border-border">
               {lines.map((line) => (
-                <OrderLineRow key={line.itemId} line={line} />
+                <OrderLineRow key={line.item.id} line={line} />
               ))}
             </ul>
             <Link href="/menu" className="self-start text-base font-semibold underline underline-offset-4">
@@ -126,7 +144,7 @@ export function OrderForm() {
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="pickup-date" className="text-base">
-          Pickup date
+          Desired pickup date
         </Label>
         <Input
           {...ignorePasswordManagers}
@@ -135,11 +153,13 @@ export function OrderForm() {
           type="date"
           required
           min={minDate}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => checkPickupDate(event.currentTarget)}
           aria-describedby="pickup-date-hint"
           className={`${fieldClass} sm:max-w-xs`}
         />
         <p id="pickup-date-hint" className="text-sm text-muted-foreground">
-          Most orders need 48–72 hours. Need it sooner? Call or text {PHONE_DISPLAY}.
+          Orders need at least 48 hours&apos; notice{minDate ? `, so the earliest date is ${formatDay(minDate, false)}` : ''}.
+          Need it sooner? Call or text {PHONE_DISPLAY}.
         </p>
       </div>
 
@@ -193,58 +213,72 @@ export function OrderForm() {
 }
 
 function OrderLineRow({ line }: { line: OrderLine }) {
-  const { remove, setQuantity } = useOrder()
-  const { item, flavors, quantity } = line
+  const { remove, setQuantity, setFlavorQuantity } = useOrder()
+  const { item, quantity, flavors } = line
+  const unchosen = item.flavors.filter((name) => !flavors.some((flavor) => flavor.name === name))
 
   return (
-    <li className="flex gap-4 p-4">
-      <div className="relative size-16 shrink-0 overflow-hidden rounded-xl bg-muted">
-        <Image src={item.image} alt="" fill sizes="64px" className="object-cover" />
+    <li className="flex flex-col gap-3 p-4">
+      <div className="flex items-start gap-4">
+        <div className="relative size-16 shrink-0 overflow-hidden rounded-xl bg-muted">
+          <Image src={item.image} alt="" fill sizes="64px" className="object-cover" />
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <p className="text-lg font-semibold leading-snug">{item.name}</p>
+          <p className="text-base italic text-muted-foreground">{item.price}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => remove(item.id)}
+          className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+        >
+          <X className="size-4" aria-hidden="true" />
+          <span className="sr-only">Remove {item.name}</span>
+        </button>
       </div>
-      <div className="flex min-w-0 flex-1 flex-col gap-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex flex-col">
-            <p className="text-lg font-semibold leading-snug">{item.name}</p>
-            <p className="text-base italic text-muted-foreground">{item.price}</p>
+
+      {/* Full width on phones so flavor names don't wrap; lined up under the name on wider screens. */}
+      <div className="flex flex-col gap-3 sm:pl-20">
+
+        {flavors.length ? (
+          <ul className="flex flex-col gap-2">
+            {flavors.map((flavor) => (
+              <li key={flavor.name} className="flex items-center justify-between gap-3">
+                <span className="min-w-0 text-base">{flavor.name}</span>
+                <QuantityStepper
+                  label={`${flavor.name} (${item.name})`}
+                  value={flavor.quantity}
+                  onChange={(next) => setFlavorQuantity(item.id, flavor.name, next)}
+                />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-base text-muted-foreground">Quantity</span>
+            <QuantityStepper label={item.name} value={quantity} onChange={(next) => setQuantity(item.id, next)} />
           </div>
-          <button
-            type="button"
-            onClick={() => remove(item.id)}
-            className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            <X className="size-4" aria-hidden="true" />
-            <span className="sr-only">Remove {item.name}</span>
-          </button>
-        </div>
-        <FlavorChips item={item} chosen={flavors} />
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground" id={`qty-${item.id}`}>
-            Quantity
-          </span>
-          <div role="group" aria-labelledby={`qty-${item.id}`} className="inline-flex items-center rounded-full border border-border">
-            <button
-              type="button"
-              onClick={() => setQuantity(item.id, quantity - 1)}
-              disabled={quantity <= 1}
-              className="inline-flex size-9 items-center justify-center rounded-full hover:bg-muted disabled:opacity-40"
-            >
-              <Minus className="size-4" aria-hidden="true" />
-              <span className="sr-only">One fewer {item.name}</span>
-            </button>
-            <output aria-live="polite" className="w-8 text-center text-base font-semibold">
-              {quantity}
-            </output>
-            <button
-              type="button"
-              onClick={() => setQuantity(item.id, quantity + 1)}
-              disabled={quantity >= MAX_QUANTITY}
-              className="inline-flex size-9 items-center justify-center rounded-full hover:bg-muted disabled:opacity-40"
-            >
-              <Plus className="size-4" aria-hidden="true" />
-              <span className="sr-only">One more {item.name}</span>
-            </button>
+        )}
+
+        {unchosen.length ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-sm text-muted-foreground">Add another flavor</p>
+            <div className="flex flex-wrap gap-2">
+              {unchosen.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => setFlavorQuantity(item.id, name, 1)}
+                  className="inline-flex min-h-8 items-center gap-1 rounded-full border border-dashed border-rouge/50 px-3 py-1 text-sm font-medium transition-colors hover:bg-blush/50"
+                >
+                  <Plus className="size-3.5" aria-hidden="true" />
+                  {name}
+                  <span className="sr-only"> ({item.name})</span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        ) : null}
       </div>
     </li>
   )

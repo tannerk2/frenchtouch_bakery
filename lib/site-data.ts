@@ -8,7 +8,7 @@ export type MenuItem = {
   price: string
   image: string
   alt: string
-  examples: string[]
+  flavors: string[]
 }
 
 export type MenuGroupMeta = {
@@ -56,7 +56,7 @@ export const SEED_MENU: MenuItem[] = [
     price: '$28',
     image: '/images/menu-tarts.png',
     alt: 'Lemon meringue tartlets with toasted meringue peaks',
-    examples: ['Lemon meringue tartlets', 'Chocolate hazelnut tartlets', 'Chocolate hazelnut tart'],
+    flavors: ['Lemon meringue tartlets', 'Chocolate hazelnut tartlets', 'Chocolate hazelnut tart'],
   },
   {
     id: 'cakes',
@@ -66,7 +66,7 @@ export const SEED_MENU: MenuItem[] = [
     price: '$45',
     image: '/images/menu-cakes.png',
     alt: 'A blush pink layered celebration cake topped with raspberries',
-    examples: ['Fraisier', 'Chocolate entremet', 'Custom celebration cakes'],
+    flavors: ['Fraisier', 'Chocolate entremet', 'Custom celebration cakes'],
   },
   {
     id: 'madeleines',
@@ -76,7 +76,7 @@ export const SEED_MENU: MenuItem[] = [
     price: '$14 / dozen',
     image: '/images/menu-madeleines.png',
     alt: 'Shell-shaped madeleines and almond financiers on parchment',
-    examples: ['Classic vanilla madeleines', 'Almond financiers', 'Lemon-glazed madeleines'],
+    flavors: ['Classic vanilla madeleines', 'Almond financiers', 'Lemon-glazed madeleines'],
   },
   {
     id: 'sweet-crepes',
@@ -86,7 +86,7 @@ export const SEED_MENU: MenuItem[] = [
     price: '$18',
     image: '/images/menu-crepes.png',
     alt: 'Folded crêpes dusted with powdered sugar with fresh strawberries',
-    examples: ['Sugar & butter', 'Chocolate hazelnut', 'Salted caramel'],
+    flavors: ['Sugar & butter', 'Chocolate hazelnut', 'Salted caramel'],
   },
   {
     id: 'seasonal',
@@ -96,7 +96,7 @@ export const SEED_MENU: MenuItem[] = [
     price: '$22',
     image: '/images/menu-seasonal.png',
     alt: 'A rustic apple tarte tatin and a galette des rois with a paper crown',
-    examples: ['Tarte tatin', 'Galette des rois', 'Bûche de Noël'],
+    flavors: ['Tarte tatin', 'Galette des rois', 'Bûche de Noël'],
   },
   {
     id: 'quiches',
@@ -106,7 +106,7 @@ export const SEED_MENU: MenuItem[] = [
     price: '$24',
     image: '/images/menu-quiche.png',
     alt: 'A golden quiche lorraine with a slice cut out, beside small gougères',
-    examples: ['Quiche lorraine', 'Gougères', 'Mini savory tartlets'],
+    flavors: ['Quiche lorraine', 'Gougères', 'Mini savory tartlets'],
   },
   {
     id: 'savory-crepes',
@@ -116,7 +116,7 @@ export const SEED_MENU: MenuItem[] = [
     price: '$20',
     image: '/images/menu-savory-crepes.png',
     alt: 'Folded buckwheat galettes filled with ham, gruyère and an egg',
-    examples: ['Ham & gruyère', 'Galette complète', 'Spinach & goat cheese'],
+    flavors: ['Ham & gruyère', 'Galette complète', 'Spinach & goat cheese'],
   },
 ]
 
@@ -181,14 +181,26 @@ type Loose = Record<string, unknown>
 const isObject = (value: unknown): value is Loose => typeof value === 'object' && value !== null
 const hasStrings = (value: Loose, keys: string[]) => keys.every((key) => typeof value[key] === 'string')
 
-function isMenuItem(value: unknown): value is MenuItem {
-  return (
-    isObject(value) &&
+// Flavor names are unique per item (case-insensitive); orders refer to flavors by name.
+export function uniqueFlavors(flavors: string[]) {
+  const seen = new Set<string>()
+  return flavors
+    .map((flavor) => flavor.trim())
+    .filter((flavor) => flavor && !seen.has(flavor.toLowerCase()) && seen.add(flavor.toLowerCase()))
+}
+
+// Content saved before October 2026 called flavors "examples".
+function toMenuItem(value: unknown): MenuItem[] {
+  if (!isObject(value)) return []
+  const flavors = Array.isArray(value.flavors) ? value.flavors : value.examples
+  const valid =
     hasStrings(value, ['id', 'name', 'description', 'price', 'image', 'alt']) &&
     MENU_GROUPS.some((group) => group.key === value.group) &&
-    Array.isArray(value.examples) &&
-    value.examples.every((example) => typeof example === 'string')
-  )
+    Array.isArray(flavors) &&
+    flavors.every((flavor) => typeof flavor === 'string')
+  if (!valid) return []
+  const { examples: _legacy, ...item } = value
+  return [{ ...(item as Omit<MenuItem, 'flavors'>), flavors: uniqueFlavors(flavors as string[]) }]
 }
 
 function isMarketEvent(value: unknown): value is MarketEvent {
@@ -207,7 +219,7 @@ function listOf<T>(value: unknown, isEntry: (entry: unknown) => entry is T): T[]
 export function parseSiteContent(raw: unknown): SiteContent {
   const data = isObject(raw) ? raw : {}
   return {
-    menu: listOf(data.menu, isMenuItem),
+    menu: Array.isArray(data.menu) ? data.menu.flatMap(toMenuItem) : [],
     events: listOf(data.events, isMarketEvent),
     photos: listOf(data.photos, isGalleryPhoto),
   }

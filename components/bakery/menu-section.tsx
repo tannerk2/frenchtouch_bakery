@@ -1,4 +1,4 @@
-import { BotanicalDivider, SectionHeading } from './ornaments'
+import { SectionHeading } from './ornaments'
 import { MenuFilter } from './menu-filter'
 
 export function MenuSection() {
@@ -9,12 +9,10 @@ export function MenuSection() {
           id="menu-title"
           eyebrow="What we make"
           title="La Carte"
-          intro="Everything is baked to order in small batches. Tap the flavors you love and add them to your order, then send it from the Order page."
+          intro="Everything is baked to order in small batches. Tap the flavors you love to add them to your order, then choose quantities and send it from the Order page."
         />
 
         <MenuFilter />
-
-        <BotanicalDivider />
       </div>
     </section>
   )

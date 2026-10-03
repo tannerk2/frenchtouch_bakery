@@ -3,14 +3,13 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ArrowRight } from 'lucide-react'
-import { useOrderLines } from './order-provider'
+import { orderCount, useOrderLines } from './order-provider'
 
 // Follows the visitor around the public pages once they've picked something, so the order is one tap away.
 export function OrderBar() {
   const pathname = usePathname()
-  const lines = useOrderLines()
-  if (!lines?.length || pathname === '/order') return null
-  const count = lines.length
+  const count = orderCount(useOrderLines())
+  if (!count || pathname === '/order') return null
 
   return (
     <>

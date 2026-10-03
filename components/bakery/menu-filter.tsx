@@ -4,7 +4,7 @@ import { useId, useRef, useState, type KeyboardEvent } from 'react'
 import Image from 'next/image'
 import { Check, Plus } from 'lucide-react'
 import { FlavorChips } from '@/components/order/flavor-chips'
-import { useOrder } from '@/components/order/order-provider'
+import { useOrder, useOrderLines } from '@/components/order/order-provider'
 import { useSiteData } from '@/components/site-data-provider'
 import { MENU_GROUPS } from '@/lib/site-data'
 import { cn } from '@/lib/utils'
@@ -13,6 +13,7 @@ import { ContentLoading } from './content-loading'
 export function MenuFilter() {
   const { menu, status } = useSiteData()
   const order = useOrder()
+  const lines = useOrderLines()
   const groups = MENU_GROUPS.map((group) => ({
     ...group,
     items: status === 'loading' ? [] : menu.filter((item) => item.group === group.key),
@@ -83,13 +84,14 @@ export function MenuFilter() {
         <ul key={active.key} className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {active.items.map((item, index) => {
             const selection = order.selections.find((entry) => entry.itemId === item.id)
+            const inOrder = Boolean(lines?.some((line) => line.item.id === item.id))
             return (
             <li
               key={item.id}
               style={{ animationDelay: `${index * 70}ms` }}
               className={cn(
                 'flex flex-col overflow-hidden rounded-3xl border border-border bg-card animate-in fade-in slide-in-from-bottom-2 fill-mode-both duration-500 motion-reduce:animate-none',
-                selection && 'ring-2 ring-rouge/60',
+                inOrder && 'ring-2 ring-rouge/60',
               )}
             >
               <div className="relative aspect-[4/3] overflow-hidden">
@@ -104,15 +106,15 @@ export function MenuFilter() {
               <div className="flex flex-1 flex-col gap-3 p-6">
                 <h3 className="text-2xl font-semibold leading-snug">{item.name}</h3>
                 <p className="leading-relaxed text-muted-foreground">{item.description}</p>
-                {item.examples.length ? (
+                {item.flavors.length ? (
                   <div className="flex flex-col gap-2">
-                    <p className="text-sm text-muted-foreground">Tap to choose flavors</p>
-                    <FlavorChips item={item} chosen={selection?.flavors ?? []} />
+                    <p className="text-sm text-muted-foreground">Tap a flavor to add it to your order</p>
+                    <FlavorChips item={item} chosen={selection?.flavors ?? {}} />
                   </div>
                 ) : null}
-                <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-2">
+                <div className="mt-auto flex min-h-10 flex-wrap items-center justify-between gap-3 pt-2">
                   <p className="text-lg font-semibold italic">{item.price}</p>
-                  {selection ? (
+                  {inOrder ? (
                     <p className="flex items-center gap-2 text-base">
                       <span className="inline-flex items-center gap-1 font-semibold text-rouge">
                         <Check className="size-4" aria-hidden="true" />
@@ -126,7 +128,7 @@ export function MenuFilter() {
                         Remove<span className="sr-only"> {item.name}</span>
                       </button>
                     </p>
-                  ) : (
+                  ) : item.flavors.length ? null : (
                     <button
                       type="button"
                       onClick={() => order.add(item.id)}

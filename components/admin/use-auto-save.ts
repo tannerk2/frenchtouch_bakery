@@ -54,6 +54,14 @@ export function useAutoSave(enabled: boolean) {
     return () => clearTimeout(timer)
   }, [enabled, content, save])
 
+  // Leaving the admin (e.g. "View site") cancels the debounce above, so save right away instead of dropping the edit.
+  useEffect(
+    () => () => {
+      if (saved.current && JSON.stringify(latest.current) !== JSON.stringify(saved.current)) void save()
+    },
+    [save],
+  )
+
   useEffect(() => {
     if (state === 'saved') return
     const warn = (event: BeforeUnloadEvent) => event.preventDefault()

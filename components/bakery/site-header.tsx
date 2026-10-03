@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Menu, X } from 'lucide-react'
-import { useOrderLines } from '@/components/order/order-provider'
+import { orderCount, useOrderLines } from '@/components/order/order-provider'
 import { cn } from '@/lib/utils'
 import { Logo } from './logo'
 
@@ -23,7 +23,7 @@ export function SiteHeader() {
   const pathname = usePathname()
   const close = () => setOpen(false)
   const isActive = (href: string) => pathname === href
-  const orderCount = useOrderLines()?.length ?? 0
+  const pickedCount = orderCount(useOrderLines())
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/70 bg-background/90 backdrop-blur-md">
@@ -60,10 +60,10 @@ export function SiteHeader() {
             className="hidden h-10 items-center gap-2 rounded-full bg-primary px-5 text-base font-semibold text-primary-foreground transition-opacity hover:opacity-90 sm:inline-flex"
           >
             Order
-            {orderCount ? (
+            {pickedCount ? (
               <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-primary-foreground px-1.5 text-sm text-primary">
-                {orderCount}
-                <span className="sr-only"> item{orderCount === 1 ? '' : 's'} picked</span>
+                {pickedCount}
+                <span className="sr-only"> item{pickedCount === 1 ? '' : 's'} picked</span>
               </span>
             ) : null}
           </Link>

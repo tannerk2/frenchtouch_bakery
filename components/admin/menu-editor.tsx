@@ -8,7 +8,7 @@ import { useSiteData } from '@/components/site-data-provider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { MENU_GROUPS, createId, type MenuGroupKey, type MenuItem } from '@/lib/site-data'
+import { MENU_GROUPS, createId, uniqueFlavors, type MenuGroupKey, type MenuItem } from '@/lib/site-data'
 import { Field, ImagePicker, selectClass } from './fields'
 
 export function MenuEditor() {
@@ -114,7 +114,8 @@ export function MenuEditor() {
                     <div className="flex min-w-0 flex-1 flex-col">
                       <p className="truncate text-xl font-semibold">{item.name}</p>
                       <p className="truncate text-base text-muted-foreground">
-                        {item.price} &bull; {item.examples.length} examples
+                        {item.price} &bull;{' '}
+                        {item.flavors.length ? `${item.flavors.length} flavor${item.flavors.length === 1 ? '' : 's'}` : 'no flavors'}
                       </p>
                     </div>
                     <div className="flex shrink-0 gap-1">
@@ -146,7 +147,7 @@ export function MenuEditor() {
 }
 
 function emptyItem(group: MenuGroupKey): MenuItem {
-  return { id: createId(), group, name: '', description: '', price: '', image: '', alt: '', examples: [] }
+  return { id: createId(), group, name: '', description: '', price: '', image: '', alt: '', flavors: [] }
 }
 
 function MenuItemForm({
@@ -159,7 +160,7 @@ function MenuItemForm({
   onCancel: () => void
 }) {
   const [item, setItem] = useState(initial)
-  const [examples, setExamples] = useState(initial.examples.join(', '))
+  const [flavors, setFlavors] = useState(() => initial.flavors.map((name) => ({ key: createId(), name })))
   const update = (patch: Partial<MenuItem>) => setItem((current) => ({ ...current, ...patch }))
   const prefix = `menu-${item.id}`
 
@@ -169,14 +170,17 @@ function MenuItemForm({
       toast.error('Please choose a photo for this item.')
       return
     }
+    const names = flavors.map((flavor) => flavor.name.trim()).filter(Boolean)
+    const duplicate = names.find((name, index) => names.findIndex((other) => other.toLowerCase() === name.toLowerCase()) !== index)
+    if (duplicate) {
+      toast.error(`“${duplicate}” is listed twice. Each flavor can only appear once.`)
+      return
+    }
     onSave({
       ...item,
       name: item.name.trim(),
       alt: item.alt.trim() || item.name.trim(),
-      examples: examples
-        .split(',')
-        .map((entry) => entry.trim())
-        .filter(Boolean),
+      flavors: uniqueFlavors(names),
     })
   }
 
@@ -235,15 +239,7 @@ function MenuItemForm({
         />
       </Field>
 
-      <Field label="Examples" htmlFor={`${prefix}-examples`} hint="Separate each one with a comma.">
-        <Input
-          id={`${prefix}-examples`}
-          placeholder="Quiche lorraine, Gougères"
-          value={examples}
-          onChange={(e) => setExamples(e.target.value)}
-          className="bg-card text-base"
-        />
-      </Field>
+      <FlavorList flavors={flavors} onChange={setFlavors} />
 
       <div className="grid gap-5 md:grid-cols-2">
         <div className="flex flex-col gap-2">
@@ -269,5 +265,66 @@ function MenuItemForm({
         </Button>
       </div>
     </form>
+  )
+}
+
+type FlavorDraft = { key: string; name: string }
+
+// One field per flavor. Customers pick from exactly these when they order, so each one is added on purpose.
+function FlavorList({ flavors, onChange }: { flavors: FlavorDraft[]; onChange: (flavors: FlavorDraft[]) => void }) {
+  const [focusKey, setFocusKey] = useState<string | null>(null)
+
+  function addFlavor() {
+    const key = createId()
+    onChange([...flavors, { key, name: '' }])
+    setFocusKey(key)
+  }
+
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="mb-2 text-base font-medium">Flavors</legend>
+      <p className="text-sm text-muted-foreground">
+        Customers choose from these when they order, each with its own quantity. Leave the list empty if this item
+        has no flavor options.
+      </p>
+      {flavors.length ? (
+        <ul className="flex flex-col gap-2">
+          {flavors.map((flavor, index) => (
+            <li key={flavor.key} className="flex items-center gap-2">
+              <Input
+                aria-label={`Flavor ${index + 1}`}
+                value={flavor.name}
+                autoFocus={flavor.key === focusKey}
+                placeholder="e.g. Lemon meringue"
+                onChange={(e) =>
+                  onChange(flavors.map((entry) => (entry.key === flavor.key ? { ...entry, name: e.target.value } : entry)))
+                }
+                // Enter adds the next flavor instead of saving the whole item.
+                onKeyDown={(e) => {
+                  if (e.key !== 'Enter') return
+                  e.preventDefault()
+                  addFlavor()
+                }}
+                className="bg-card text-base"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="text-destructive"
+                onClick={() => onChange(flavors.filter((entry) => entry.key !== flavor.key))}
+              >
+                <Trash2 aria-hidden="true" />
+                <span className="sr-only">Remove flavor {flavor.name || index + 1}</span>
+              </Button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <Button type="button" variant="outline" className="self-start text-base" onClick={addFlavor}>
+        <Plus aria-hidden="true" />
+        Add flavor
+      </Button>
+    </fieldset>
   )
 }
