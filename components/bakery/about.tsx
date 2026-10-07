@@ -29,8 +29,8 @@ export function About() {
           <div className="flex flex-col gap-4 text-lg leading-relaxed text-pretty">
             <p>
               Bonjour, I&apos;m Agathe Perrier. I grew up in France, where Sunday mornings meant a trip to the
-              pâtisserie and afternoons meant baking alongside my grandmother, measuring butter by feel and
-              learning that the best things take a little patience.
+              pâtisserie and afternoons meant baking alongside my grandmother, learning that the best things
+              take a little patience.
             </p>
             <p>
               When I made Meridian my home, I missed those flavors terribly, so I started baking them myself.
