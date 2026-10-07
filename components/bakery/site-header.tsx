@@ -33,7 +33,7 @@ export function SiteHeader() {
       >
         <Link href="/" className="flex min-w-0 items-center gap-2.5" onClick={close}>
           <Logo size={48} priority className="md:size-14" />
-          <span className="truncate font-script text-2xl leading-none md:text-3xl">French Touch Bakery</span>
+          <span className="truncate font-script text-2xl leading-normal md:text-3xl">French Touch Bakery</span>
         </Link>
 
         <ul className="hidden items-center gap-6 lg:flex">

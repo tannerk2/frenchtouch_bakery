@@ -21,7 +21,7 @@ export function SiteFooter() {
           </a>
         </p>
         <p className="text-sm text-muted-foreground">Home-based bakery &bull; Meridian, Idaho</p>
-        <FoodDisclaimer className="max-w-xl text-left text-muted-foreground" />
+        <FoodDisclaimer centered className="max-w-xl text-muted-foreground" />
         <p className="text-sm text-muted-foreground">
           &copy; {new Date().getFullYear()} French Touch Bakery &bull;{' '}
           <Link href="/admin" className="underline-offset-4 hover:underline">

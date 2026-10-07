@@ -1,6 +1,5 @@
 import { EventsList } from './events-list'
 import { SectionHeading } from './ornaments'
-import { SocialLinks } from './social'
 
 export function Markets() {
   return (
@@ -15,12 +14,9 @@ export function Markets() {
 
         <EventsList />
 
-        <div className="flex flex-col items-center gap-4 text-center">
-          <p className="leading-relaxed text-muted-foreground text-pretty">
-            Market dates can change with the weather. Follow along on social media for the latest updates.
-          </p>
-          <SocialLinks />
-        </div>
+        <p className="text-center leading-relaxed text-muted-foreground text-pretty">
+          Market dates can change with the weather. Follow along on social media for the latest updates.
+        </p>
       </div>
     </section>
   )

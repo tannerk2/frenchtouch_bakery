@@ -6,7 +6,16 @@ import { cn } from '@/lib/utils'
 export const FOOD_DISCLAIMER =
   'These products are not subject to government food safety inspection or licensing requirements. They may contain allergens.'
 
-export function FoodDisclaimer({ className }: { className?: string }) {
+export function FoodDisclaimer({ className, centered = false }: { className?: string; centered?: boolean }) {
+  if (centered) {
+    // The icon sits inline with the first word so the whole sentence centers as one block.
+    return (
+      <p className={cn('text-center text-sm leading-relaxed text-balance', className)}>
+        <Info className="mr-1.5 inline size-4 align-[-0.15em]" aria-hidden="true" />
+        {FOOD_DISCLAIMER}
+      </p>
+    )
+  }
   return (
     <p className={cn('flex items-start gap-2 text-sm leading-relaxed', className)}>
       <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />

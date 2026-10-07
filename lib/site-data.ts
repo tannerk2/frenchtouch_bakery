@@ -38,12 +38,12 @@ export const MENU_GROUPS: MenuGroupMeta[] = [
   {
     key: 'sweet',
     label: 'Sweet',
-    intro: 'Tarts, cakes and little French treats for dessert, goûter and every celebration.',
+    intro: 'Tarts, cakes and little French treats for dessert, snacks and every celebration.',
   },
   {
     key: 'savory',
     label: 'Savory',
-    intro: 'Quiches, galettes and apéritif bites for brunches, showers and gatherings.',
+    intro: 'Quiches and bite-sized appetizers for brunches and gatherings.',
   },
 ]
 
