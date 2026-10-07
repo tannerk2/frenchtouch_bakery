@@ -8,6 +8,7 @@ import { useSiteData } from '@/components/site-data-provider'
 import { MENU_GROUPS } from '@/lib/site-data'
 import { cn } from '@/lib/utils'
 import { ContentLoading } from './content-loading'
+import { DescriptionText } from './description-text'
 
 export function MenuFilter() {
   const { menu, status } = useSiteData()
@@ -103,7 +104,7 @@ export function MenuFilter() {
               </div>
               <div className="flex flex-1 flex-col gap-3 p-6">
                 <h3 className="text-2xl font-semibold leading-snug">{item.name}</h3>
-                <p className="leading-relaxed text-muted-foreground">{item.description}</p>
+                <DescriptionText text={item.description} className="text-muted-foreground" />
                 {item.flavors.length ? (
                   <ul className="flex flex-wrap gap-2" aria-label={`Flavors of ${item.name}`}>
                     {item.flavors.map((flavor) => (
