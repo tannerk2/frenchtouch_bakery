@@ -6,6 +6,27 @@ import { cn } from '@/lib/utils'
 export const FOOD_DISCLAIMER =
   'These products are not subject to government food safety inspection or licensing requirements. They may contain allergens.'
 
+// Allergens used in Agathe's kitchen. Shown on the Order page (notice and sidebar).
+export const KITCHEN_ALLERGENS = 'gluten, eggs, fish, milk, mustard, tree nuts and peanuts'
+
+// The fuller version shown right before sending an order: what the notice is, the required
+// wording, and which allergens the kitchen actually uses.
+export function OrderNotice({ className }: { className?: string }) {
+  return (
+    <div className={cn('flex flex-col gap-1.5 rounded-2xl bg-muted/60 px-4 py-3 text-sm leading-relaxed', className)}>
+      <p className="flex items-center gap-2 text-base font-semibold text-foreground">
+        <Info className="size-4 shrink-0" aria-hidden="true" />
+        Home kitchen &amp; allergen notice
+      </p>
+      <p>{FOOD_DISCLAIMER}</p>
+      <p>
+        Everything is made in a home kitchen that uses <strong className="font-semibold">{KITCHEN_ALLERGENS}</strong>.
+        If you have an allergy, mention it in the notes so Agathe can tell you which items contain it.
+      </p>
+    </div>
+  )
+}
+
 export function FoodDisclaimer({ className, centered = false }: { className?: string; centered?: boolean }) {
   if (centered) {
     // The icon sits inline with the first word so the whole sentence centers as one block.

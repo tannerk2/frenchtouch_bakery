@@ -1,4 +1,5 @@
 import { Clock, Info, Mail, MapPin, Phone } from 'lucide-react'
+import { KITCHEN_ALLERGENS } from '@/components/bakery/food-disclaimer'
 import { SectionHeading } from '@/components/bakery/ornaments'
 import {
   EMAIL,
@@ -48,7 +49,7 @@ export function OrderSection() {
                 <Info className="mt-1 size-5 shrink-0" aria-hidden="true" />
                 <span>
                   <strong className="font-semibold">Allergen information is available on request.</strong> Everything
-                  is made in a home kitchen that uses gluten, eggs, fish, milk, mustard, tree nuts and peanuts.
+                  is made in a home kitchen that uses {KITCHEN_ALLERGENS}.
                 </span>
               </p>
               <p className="flex items-start gap-3 leading-relaxed">
