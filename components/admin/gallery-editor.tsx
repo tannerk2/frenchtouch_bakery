@@ -76,7 +76,8 @@ export function GalleryEditor() {
         </Button>
       </div>
       <p className="text-base text-muted-foreground">
-        New photos appear first. Write a short description of each one for visitors using screen readers.
+        New photos appear first. Give each photo a name: visitors see it when they hover over the photo (or below it on
+        phones), and screen readers read it aloud.
       </p>
 
       <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -94,7 +95,7 @@ export function GalleryEditor() {
             <div className="flex flex-col gap-3 p-4" data-lpignore="true">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor={`alt-${photo.id}`} className="text-sm">
-                  Description
+                  Name
                 </Label>
                 <Input
                   id={`alt-${photo.id}`}

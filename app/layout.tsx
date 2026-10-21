@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'French Touch Bakery',
     description: 'French-inspired cakes & pastries, made by hand in Meridian.',
-    images: ['/images/hero-tart.png'],
+    images: ['/images/hero-tartlets.jpg'],
   },
   // Tab icons use the cake from the logo (the lettering is unreadable at 16-48px); iOS gets the full logo.
   icons: {

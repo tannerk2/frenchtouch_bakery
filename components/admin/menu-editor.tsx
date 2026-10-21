@@ -147,7 +147,7 @@ export function MenuEditor() {
 }
 
 function emptyItem(group: MenuGroupKey): MenuItem {
-  return { id: createId(), group, name: '', description: '', price: '', image: '', alt: '', flavors: [] }
+  return { id: createId(), group, name: '', description: '', price: '', image: '', alt: '', flavors: [], options: [], orderNote: '' }
 }
 
 function MenuItemForm({
@@ -160,7 +160,8 @@ function MenuItemForm({
   onCancel: () => void
 }) {
   const [item, setItem] = useState(initial)
-  const [flavors, setFlavors] = useState(() => initial.flavors.map((name) => ({ key: createId(), name })))
+  const [flavors, setFlavors] = useState(() => toDrafts(initial.flavors))
+  const [options, setOptions] = useState(() => toDrafts(initial.options))
   const update = (patch: Partial<MenuItem>) => setItem((current) => ({ ...current, ...patch }))
   const prefix = `menu-${item.id}`
 
@@ -170,17 +171,20 @@ function MenuItemForm({
       toast.error('Please choose a photo for this item.')
       return
     }
-    const names = flavors.map((flavor) => flavor.name.trim()).filter(Boolean)
-    const duplicate = names.find((name, index) => names.findIndex((other) => other.toLowerCase() === name.toLowerCase()) !== index)
+    const flavorNames = names(flavors)
+    const optionNames = names(options)
+    const duplicate = findDuplicate(flavorNames) ?? findDuplicate(optionNames)
     if (duplicate) {
-      toast.error(`“${duplicate}” is listed twice. Each flavor can only appear once.`)
+      toast.error(`“${duplicate}” is listed twice. Each one can only appear once.`)
       return
     }
     onSave({
       ...item,
       name: item.name.trim(),
       alt: item.alt.trim() || item.name.trim(),
-      flavors: uniqueFlavors(names),
+      flavors: uniqueFlavors(flavorNames),
+      options: uniqueFlavors(optionNames),
+      orderNote: item.orderNote.trim(),
     })
   }
 
@@ -239,7 +243,37 @@ function MenuItemForm({
         />
       </Field>
 
-      <FlavorList flavors={flavors} onChange={setFlavors} />
+      <EntryList
+        legend="Flavors"
+        hint="Customers choose from these when they order, each with its own quantity. Leave the list empty if this item has no flavor options."
+        noun="flavor"
+        placeholder="e.g. Lemon meringue"
+        entries={flavors}
+        onChange={setFlavors}
+      />
+
+      <EntryList
+        legend="Options (optional)"
+        hint="If customers must pick one choice for the whole item, like Tart or Tartlets, list the choices here. Leave empty otherwise."
+        noun="option"
+        placeholder="e.g. Tartlets (minimum 6)"
+        entries={options}
+        onChange={setOptions}
+      />
+
+      <Field
+        label="Order reminder (optional)"
+        htmlFor={`${prefix}-order-note`}
+        hint="Shown with this item on the Order page, e.g. a minimum quantity."
+      >
+        <Input
+          id={`${prefix}-order-note`}
+          placeholder="e.g. Minimum 12 madeleines"
+          value={item.orderNote}
+          onChange={(e) => update({ orderNote: e.target.value })}
+          className="bg-card text-base"
+        />
+      </Field>
 
       <div className="grid gap-5 md:grid-cols-2">
         <div className="flex flex-col gap-2">
@@ -268,42 +302,59 @@ function MenuItemForm({
   )
 }
 
-type FlavorDraft = { key: string; name: string }
+type EntryDraft = { key: string; name: string }
 
-// One field per flavor. Customers pick from exactly these when they order, so each one is added on purpose.
-function FlavorList({ flavors, onChange }: { flavors: FlavorDraft[]; onChange: (flavors: FlavorDraft[]) => void }) {
+const toDrafts = (entries: string[]): EntryDraft[] => entries.map((name) => ({ key: createId(), name }))
+const names = (drafts: EntryDraft[]) => drafts.map((draft) => draft.name.trim()).filter(Boolean)
+const findDuplicate = (list: string[]) =>
+  list.find((name, index) => list.findIndex((other) => other.toLowerCase() === name.toLowerCase()) !== index)
+
+// One field per entry (flavors, options). Customers pick from exactly these, so each one is added on purpose.
+function EntryList({
+  legend,
+  hint,
+  noun,
+  placeholder,
+  entries,
+  onChange,
+}: {
+  legend: string
+  hint: string
+  noun: string
+  placeholder: string
+  entries: EntryDraft[]
+  onChange: (entries: EntryDraft[]) => void
+}) {
   const [focusKey, setFocusKey] = useState<string | null>(null)
+  const label = noun[0].toUpperCase() + noun.slice(1)
 
-  function addFlavor() {
+  function addEntry() {
     const key = createId()
-    onChange([...flavors, { key, name: '' }])
+    onChange([...entries, { key, name: '' }])
     setFocusKey(key)
   }
 
   return (
     <fieldset className="flex flex-col gap-2">
-      <legend className="mb-2 text-base font-medium">Flavors</legend>
-      <p className="text-sm text-muted-foreground">
-        Customers choose from these when they order, each with its own quantity. Leave the list empty if this item
-        has no flavor options.
-      </p>
-      {flavors.length ? (
+      <legend className="mb-2 text-base font-medium">{legend}</legend>
+      <p className="text-sm text-muted-foreground">{hint}</p>
+      {entries.length ? (
         <ul className="flex flex-col gap-2">
-          {flavors.map((flavor, index) => (
-            <li key={flavor.key} className="flex items-center gap-2">
+          {entries.map((entry, index) => (
+            <li key={entry.key} className="flex items-center gap-2">
               <Input
-                aria-label={`Flavor ${index + 1}`}
-                value={flavor.name}
-                autoFocus={flavor.key === focusKey}
-                placeholder="e.g. Lemon meringue"
+                aria-label={`${label} ${index + 1}`}
+                value={entry.name}
+                autoFocus={entry.key === focusKey}
+                placeholder={placeholder}
                 onChange={(e) =>
-                  onChange(flavors.map((entry) => (entry.key === flavor.key ? { ...entry, name: e.target.value } : entry)))
+                  onChange(entries.map((other) => (other.key === entry.key ? { ...other, name: e.target.value } : other)))
                 }
-                // Enter adds the next flavor instead of saving the whole item.
+                // Enter adds the next entry instead of saving the whole item.
                 onKeyDown={(e) => {
                   if (e.key !== 'Enter') return
                   e.preventDefault()
-                  addFlavor()
+                  addEntry()
                 }}
                 className="bg-card text-base"
               />
@@ -312,18 +363,20 @@ function FlavorList({ flavors, onChange }: { flavors: FlavorDraft[]; onChange: (
                 variant="ghost"
                 size="icon"
                 className="text-destructive"
-                onClick={() => onChange(flavors.filter((entry) => entry.key !== flavor.key))}
+                onClick={() => onChange(entries.filter((other) => other.key !== entry.key))}
               >
                 <Trash2 aria-hidden="true" />
-                <span className="sr-only">Remove flavor {flavor.name || index + 1}</span>
+                <span className="sr-only">
+                  Remove {noun} {entry.name || index + 1}
+                </span>
               </Button>
             </li>
           ))}
         </ul>
       ) : null}
-      <Button type="button" variant="outline" className="self-start text-base" onClick={addFlavor}>
+      <Button type="button" variant="outline" className="self-start text-base" onClick={addEntry}>
         <Plus aria-hidden="true" />
-        Add flavor
+        Add {noun}
       </Button>
     </fieldset>
   )

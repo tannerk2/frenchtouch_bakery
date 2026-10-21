@@ -46,8 +46,8 @@ export function Hero() {
           <div className="absolute -right-3 -bottom-3 h-full w-full rounded-[2.5rem] bg-sage/40" aria-hidden="true" />
           <div className="relative aspect-[4/5] overflow-hidden rounded-[2.5rem] border-8 border-card md:aspect-[5/6]">
             <Image
-              src="/images/hero-tart.png"
-              alt="A chocolate hazelnut tart beside lemon meringue tartlets on a linen tablecloth"
+              src="/images/hero-tartlets.jpg"
+              alt="An assortment of tartlets on a marble cake stand: strawberry, chocolate, lemon meringue and vanilla cream"
               fill
               priority
               sizes="(min-width: 768px) 50vw, 100vw"

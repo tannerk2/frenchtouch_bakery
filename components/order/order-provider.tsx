@@ -8,7 +8,8 @@ import type { MenuItem } from '@/lib/site-data'
 // It is a request list, not a cart: Agathe confirms the order and total by reply.
 // Items are added from the menu; flavors and quantities are chosen on the Order page. Items with flavors
 // are ordered per flavor (`flavors`: name -> quantity); items without use `quantity`.
-export type OrderSelection = { itemId: string; quantity: number; flavors: Record<string, number> }
+// `option` is the visitor's pick when the item has options (e.g. Tart or Tartlets).
+export type OrderSelection = { itemId: string; quantity: number; flavors: Record<string, number>; option?: string }
 
 export type OrderLine = {
   item: MenuItem
@@ -17,6 +18,9 @@ export type OrderLine = {
   flavors: { name: string; quantity: number }[]
   // An item with flavors can't be sent until at least one flavor has a quantity.
   needsFlavor: boolean
+  // The chosen option, if it is still one Agathe offers.
+  option: string | null
+  needsOption: boolean
 }
 
 type OrderState = {
@@ -26,6 +30,7 @@ type OrderState = {
   remove: (itemId: string) => void
   setQuantity: (itemId: string, quantity: number) => void
   setFlavorQuantity: (itemId: string, flavor: string, quantity: number) => void
+  setOption: (itemId: string, option: string) => void
   clear: () => void
 }
 
@@ -46,7 +51,8 @@ function readStored(): OrderSelection[] {
         Number.isInteger(entry.quantity) &&
         typeof entry.flavors === 'object' &&
         entry.flavors !== null &&
-        Object.values(entry.flavors).every((quantity) => Number.isInteger(quantity) && (quantity as number) > 0),
+        Object.values(entry.flavors).every((quantity) => Number.isInteger(quantity) && (quantity as number) > 0) &&
+        (entry.option === undefined || typeof entry.option === 'string'),
     )
   } catch {
     return []
@@ -89,6 +95,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
           const next = clamp(quantity, 0)
           return { ...entry, flavors: next > 0 ? { ...flavors, [flavor]: next } : flavors }
         }),
+      setOption: (itemId, option) => update(itemId, (entry) => ({ ...entry, option })),
       clear: () => setSelections([]),
     }
   }, [ready, selections])
@@ -113,12 +120,15 @@ export function useOrderLines(): OrderLine[] | null {
       const item = menu.find((entry) => entry.id === selection.itemId)
       if (!item) return []
       const flavors = item.flavors.map((name) => ({ name, quantity: selection.flavors[name] ?? 0 }))
+      const option = selection.option && item.options.includes(selection.option) ? selection.option : null
       return [
         {
           item,
           quantity: Math.max(1, selection.quantity),
           flavors,
           needsFlavor: flavors.length > 0 && flavors.every((flavor) => flavor.quantity === 0),
+          option,
+          needsOption: item.options.length > 0 && option === null,
         },
       ]
     })

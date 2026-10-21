@@ -9,6 +9,10 @@ export type MenuItem = {
   image: string
   alt: string
   flavors: string[]
+  // Optional "pick one" choices, e.g. Tart or Tartlets. Customers must choose one when ordering.
+  options: string[]
+  // Optional reminder shown on the Order page, e.g. "Minimum 12 madeleines".
+  orderNote: string
 }
 
 export type MenuGroupMeta = {
@@ -57,6 +61,8 @@ export const SEED_MENU: MenuItem[] = [
     image: '/images/menu-tarts.png',
     alt: 'Lemon meringue tartlets with toasted meringue peaks',
     flavors: ['Lemon meringue tartlets', 'Chocolate hazelnut tartlets', 'Chocolate hazelnut tart'],
+    options: [],
+    orderNote: '',
   },
   {
     id: 'cakes',
@@ -67,6 +73,8 @@ export const SEED_MENU: MenuItem[] = [
     image: '/images/menu-cakes.png',
     alt: 'A blush pink layered celebration cake topped with raspberries',
     flavors: ['Fraisier', 'Chocolate entremet', 'Custom celebration cakes'],
+    options: [],
+    orderNote: '',
   },
   {
     id: 'madeleines',
@@ -77,6 +85,8 @@ export const SEED_MENU: MenuItem[] = [
     image: '/images/menu-madeleines.png',
     alt: 'Shell-shaped madeleines and almond financiers on parchment',
     flavors: ['Classic vanilla madeleines', 'Almond financiers', 'Lemon-glazed madeleines'],
+    options: [],
+    orderNote: '',
   },
   {
     id: 'sweet-crepes',
@@ -87,6 +97,8 @@ export const SEED_MENU: MenuItem[] = [
     image: '/images/menu-crepes.png',
     alt: 'Folded crêpes dusted with powdered sugar with fresh strawberries',
     flavors: ['Sugar & butter', 'Chocolate hazelnut', 'Salted caramel'],
+    options: [],
+    orderNote: '',
   },
   {
     id: 'seasonal',
@@ -97,6 +109,8 @@ export const SEED_MENU: MenuItem[] = [
     image: '/images/menu-seasonal.png',
     alt: 'A rustic apple tarte tatin and a galette des rois with a paper crown',
     flavors: ['Tarte tatin', 'Galette des rois', 'Bûche de Noël'],
+    options: [],
+    orderNote: '',
   },
   {
     id: 'quiches',
@@ -107,6 +121,8 @@ export const SEED_MENU: MenuItem[] = [
     image: '/images/menu-quiche.png',
     alt: 'A golden quiche lorraine with a slice cut out, beside small gougères',
     flavors: ['Quiche lorraine', 'Gougères', 'Mini savory tartlets'],
+    options: [],
+    orderNote: '',
   },
   {
     id: 'savory-crepes',
@@ -117,6 +133,8 @@ export const SEED_MENU: MenuItem[] = [
     image: '/images/menu-savory-crepes.png',
     alt: 'Folded buckwheat galettes filled with ham, gruyère and an egg',
     flavors: ['Ham & gruyère', 'Galette complète', 'Spinach & goat cheese'],
+    options: [],
+    orderNote: '',
   },
 ]
 
@@ -200,7 +218,16 @@ function toMenuItem(value: unknown): MenuItem[] {
     flavors.every((flavor) => typeof flavor === 'string')
   if (!valid) return []
   const { examples: _legacy, ...item } = value
-  return [{ ...(item as Omit<MenuItem, 'flavors'>), flavors: uniqueFlavors(flavors as string[]) }]
+  // Options and order reminders were added later; older saved items simply have none.
+  const options = Array.isArray(value.options) ? value.options.filter((option) => typeof option === 'string') : []
+  return [
+    {
+      ...(item as Omit<MenuItem, 'flavors' | 'options' | 'orderNote'>),
+      flavors: uniqueFlavors(flavors as string[]),
+      options: uniqueFlavors(options),
+      orderNote: typeof value.orderNote === 'string' ? value.orderNote.trim() : '',
+    },
+  ]
 }
 
 function isMarketEvent(value: unknown): value is MarketEvent {

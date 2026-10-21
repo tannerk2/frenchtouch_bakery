@@ -50,11 +50,12 @@ function checkPickupDate(input: HTMLInputElement) {
   )
 }
 
-function describeLine({ item, quantity, flavors }: OrderLine) {
+function describeLine({ item, quantity, flavors, option }: OrderLine) {
   const chosen = flavors.filter((flavor) => flavor.quantity > 0)
+  const name = option ? `${item.name}, ${option}` : item.name
   return chosen.length
-    ? `${item.name} (${item.price}): ${chosen.map((flavor) => `${flavor.quantity} × ${flavor.name}`).join(', ')}`
-    : `${quantity} × ${item.name} (${item.price})`
+    ? `${name} (${item.price}): ${chosen.map((flavor) => `${flavor.quantity} × ${flavor.name}`).join(', ')}`
+    : `${quantity} × ${name} (${item.price})`
 }
 
 export function OrderForm() {
@@ -73,7 +74,7 @@ export function OrderForm() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = event.currentTarget
-    const missingFlavors = lines?.filter((line) => line.needsFlavor) ?? []
+    const missingFlavors = lines?.filter((line) => line.needsFlavor || line.needsOption) ?? []
     if (missingFlavors.length) {
       setShowFlavorErrors(true)
       document.getElementById(lineId(missingFlavors[0]))?.focus()
@@ -143,7 +144,7 @@ export function OrderForm() {
           <>
             <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border">
               {lines.map((line) => (
-                <OrderLineRow key={line.item.id} line={line} showError={showFlavorErrors && line.needsFlavor} />
+                <OrderLineRow key={line.item.id} line={line} showErrors={showFlavorErrors} />
               ))}
             </ul>
             <Link href="/menu" className="self-start text-base font-semibold underline underline-offset-4">
@@ -202,7 +203,7 @@ export function OrderForm() {
           name="notes"
           required={!lines?.length}
           rows={4}
-          placeholder="Sizes, number of guests, allergies, a message for the cake…"
+          placeholder="Sizes, number of guests, allergies…"
           className="rounded-xl bg-background text-base"
         />
       </div>
@@ -227,17 +228,19 @@ export function OrderForm() {
 
 const lineId = (line: OrderLine) => `order-line-${line.item.id}`
 
-function OrderLineRow({ line, showError }: { line: OrderLine; showError: boolean }) {
-  const { remove, setQuantity, setFlavorQuantity } = useOrder()
+function OrderLineRow({ line, showErrors }: { line: OrderLine; showErrors: boolean }) {
+  const { remove, setQuantity, setFlavorQuantity, setOption } = useOrder()
   const { item, quantity, flavors } = line
   const hintId = `${lineId(line)}-hint`
+  const showError = showErrors && line.needsFlavor
+  const showOptionError = showErrors && line.needsOption
 
   return (
     <li
       id={lineId(line)}
       tabIndex={-1}
       aria-describedby={flavors.length ? hintId : undefined}
-      className={cn('flex scroll-mt-28 flex-col gap-3 p-4 outline-none', showError && 'bg-destructive/5')}
+      className={cn('flex scroll-mt-28 flex-col gap-3 p-4 outline-none', (showError || showOptionError) && 'bg-destructive/5')}
     >
       <div className="flex items-start gap-4">
         <div className="relative size-16 shrink-0 overflow-hidden rounded-xl bg-muted">
@@ -246,6 +249,7 @@ function OrderLineRow({ line, showError }: { line: OrderLine; showError: boolean
         <div className="flex min-w-0 flex-1 flex-col">
           <p className="text-lg font-semibold leading-snug">{item.name}</p>
           <p className="text-base italic text-muted-foreground">{item.price}</p>
+          {item.orderNote ? <p className="mt-1 text-sm font-semibold text-rouge">{item.orderNote}</p> : null}
         </div>
         <button
           type="button"
@@ -259,6 +263,34 @@ function OrderLineRow({ line, showError }: { line: OrderLine; showError: boolean
 
       {/* Full width on phones so flavor names don't wrap; lined up under the name on wider screens. */}
       <div className="flex flex-col gap-3 sm:pl-20">
+        {item.options.length ? (
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-2 text-sm text-muted-foreground">Choose one:</legend>
+            <div className="flex flex-wrap gap-2">
+              {item.options.map((option) => (
+                <label
+                  key={option}
+                  className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-base transition-colors has-checked:border-rouge has-checked:bg-blush has-checked:font-semibold has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring"
+                >
+                  <input
+                    type="radio"
+                    name={`option-${item.id}`}
+                    value={option}
+                    checked={line.option === option}
+                    onChange={() => setOption(item.id, option)}
+                    className="size-4 accent-rouge"
+                  />
+                  {option}
+                </label>
+              ))}
+            </div>
+            {showOptionError ? (
+              <p role="alert" className="text-sm font-semibold text-destructive">
+                Please choose one: {item.options.join(' or ')}.
+              </p>
+            ) : null}
+          </fieldset>
+        ) : null}
         {flavors.length ? (
           <>
             <p

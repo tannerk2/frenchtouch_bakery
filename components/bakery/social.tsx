@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils'
 
 export const INSTAGRAM_URL = 'https://www.instagram.com/frenchtouch_bakery'
-export const FACEBOOK_URL = 'https://www.facebook.com/search/top?q=French%20Touch%20Bakery'
+export const FACEBOOK_URL = 'https://www.facebook.com/profile.php?id=61594830834357'
 export const PHONE_DISPLAY = '(707) 782-3138'
 export const PHONE_HREF = 'tel:+17077823138'
 export const EMAIL = 'frenchtouch.bakery@gmail.com'
