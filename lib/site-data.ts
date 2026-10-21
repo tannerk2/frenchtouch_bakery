@@ -10,10 +10,13 @@ export type MenuItem = {
   alt: string
   flavors: string[]
   // Optional "pick one" choices, e.g. Tart or Tartlets. Customers must choose one when ordering.
-  options: string[]
-  // Optional reminder shown on the Order page, e.g. "Minimum 12 madeleines".
-  orderNote: string
+  options: MenuOption[]
+  // Fewest pieces per order when the item has no options (0 = no minimum).
+  minimum: number
 }
+
+// An option can carry its own minimum, e.g. Tartlets: 6 (0 = no minimum).
+export type MenuOption = { name: string; minimum: number }
 
 export type MenuGroupMeta = {
   key: MenuGroupKey
@@ -62,7 +65,7 @@ export const SEED_MENU: MenuItem[] = [
     alt: 'Lemon meringue tartlets with toasted meringue peaks',
     flavors: ['Lemon meringue tartlets', 'Chocolate hazelnut tartlets', 'Chocolate hazelnut tart'],
     options: [],
-    orderNote: '',
+    minimum: 0,
   },
   {
     id: 'cakes',
@@ -74,7 +77,7 @@ export const SEED_MENU: MenuItem[] = [
     alt: 'A blush pink layered celebration cake topped with raspberries',
     flavors: ['Fraisier', 'Chocolate entremet', 'Custom celebration cakes'],
     options: [],
-    orderNote: '',
+    minimum: 0,
   },
   {
     id: 'madeleines',
@@ -86,7 +89,7 @@ export const SEED_MENU: MenuItem[] = [
     alt: 'Shell-shaped madeleines and almond financiers on parchment',
     flavors: ['Classic vanilla madeleines', 'Almond financiers', 'Lemon-glazed madeleines'],
     options: [],
-    orderNote: '',
+    minimum: 0,
   },
   {
     id: 'sweet-crepes',
@@ -98,7 +101,7 @@ export const SEED_MENU: MenuItem[] = [
     alt: 'Folded crêpes dusted with powdered sugar with fresh strawberries',
     flavors: ['Sugar & butter', 'Chocolate hazelnut', 'Salted caramel'],
     options: [],
-    orderNote: '',
+    minimum: 0,
   },
   {
     id: 'seasonal',
@@ -110,7 +113,7 @@ export const SEED_MENU: MenuItem[] = [
     alt: 'A rustic apple tarte tatin and a galette des rois with a paper crown',
     flavors: ['Tarte tatin', 'Galette des rois', 'Bûche de Noël'],
     options: [],
-    orderNote: '',
+    minimum: 0,
   },
   {
     id: 'quiches',
@@ -122,7 +125,7 @@ export const SEED_MENU: MenuItem[] = [
     alt: 'A golden quiche lorraine with a slice cut out, beside small gougères',
     flavors: ['Quiche lorraine', 'Gougères', 'Mini savory tartlets'],
     options: [],
-    orderNote: '',
+    minimum: 0,
   },
   {
     id: 'savory-crepes',
@@ -134,7 +137,7 @@ export const SEED_MENU: MenuItem[] = [
     alt: 'Folded buckwheat galettes filled with ham, gruyère and an egg',
     flavors: ['Ham & gruyère', 'Galette complète', 'Spinach & goat cheese'],
     options: [],
-    orderNote: '',
+    minimum: 0,
   },
 ]
 
@@ -207,6 +210,20 @@ export function uniqueFlavors(flavors: string[]) {
     .filter((flavor) => flavor && !seen.has(flavor.toLowerCase()) && seen.add(flavor.toLowerCase()))
 }
 
+const toMinimum = (value: unknown) =>
+  typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.min(999, Math.round(value)) : 0
+
+function toOptions(value: unknown): MenuOption[] {
+  if (!Array.isArray(value)) return []
+  const options = value.flatMap((entry): MenuOption[] => {
+    if (typeof entry === 'string') return [{ name: entry.trim(), minimum: 0 }]
+    if (isObject(entry) && typeof entry.name === 'string') return [{ name: entry.name.trim(), minimum: toMinimum(entry.minimum) }]
+    return []
+  })
+  const names = uniqueFlavors(options.map((option) => option.name))
+  return names.map((name) => options.find((option) => option.name === name) as MenuOption)
+}
+
 // Content saved before October 2026 called flavors "examples".
 function toMenuItem(value: unknown): MenuItem[] {
   if (!isObject(value)) return []
@@ -218,14 +235,15 @@ function toMenuItem(value: unknown): MenuItem[] {
     flavors.every((flavor) => typeof flavor === 'string')
   if (!valid) return []
   const { examples: _legacy, ...item } = value
-  // Options and order reminders were added later; older saved items simply have none.
-  const options = Array.isArray(value.options) ? value.options.filter((option) => typeof option === 'string') : []
+  // Options and minimums were added later; older saved items simply have none. Options were briefly
+  // saved as plain names, and a free-text "orderNote" reminder existed before minimums were numbers.
+  const { orderNote: _note, ...rest } = item
   return [
     {
-      ...(item as Omit<MenuItem, 'flavors' | 'options' | 'orderNote'>),
+      ...(rest as Omit<MenuItem, 'flavors' | 'options' | 'minimum'>),
       flavors: uniqueFlavors(flavors as string[]),
-      options: uniqueFlavors(options),
-      orderNote: typeof value.orderNote === 'string' ? value.orderNote.trim() : '',
+      options: toOptions(value.options),
+      minimum: toMinimum(value.minimum),
     },
   ]
 }

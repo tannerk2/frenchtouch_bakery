@@ -21,6 +21,11 @@ export type OrderLine = {
   // The chosen option, if it is still one Agathe offers.
   option: string | null
   needsOption: boolean
+  // Total pieces of this item, and the fewest allowed: the chosen option's minimum, or the item's own
+  // minimum when it has no options (0 = none).
+  count: number
+  minimum: number
+  belowMinimum: boolean
 }
 
 type OrderState = {
@@ -120,15 +125,22 @@ export function useOrderLines(): OrderLine[] | null {
       const item = menu.find((entry) => entry.id === selection.itemId)
       if (!item) return []
       const flavors = item.flavors.map((name) => ({ name, quantity: selection.flavors[name] ?? 0 }))
-      const option = selection.option && item.options.includes(selection.option) ? selection.option : null
+      const chosenOption = item.options.find((entry) => entry.name === selection.option) ?? null
+      const option = chosenOption?.name ?? null
+      const quantity = Math.max(1, selection.quantity)
+      const count = flavors.length ? flavors.reduce((sum, flavor) => sum + flavor.quantity, 0) : quantity
+      const minimum = item.options.length ? (chosenOption?.minimum ?? 0) : item.minimum
       return [
         {
           item,
-          quantity: Math.max(1, selection.quantity),
+          quantity,
           flavors,
           needsFlavor: flavors.length > 0 && flavors.every((flavor) => flavor.quantity === 0),
           option,
           needsOption: item.options.length > 0 && option === null,
+          count,
+          minimum,
+          belowMinimum: minimum > 0 && count < minimum,
         },
       ]
     })

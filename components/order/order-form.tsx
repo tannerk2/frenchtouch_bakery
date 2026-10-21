@@ -74,7 +74,7 @@ export function OrderForm() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = event.currentTarget
-    const missingFlavors = lines?.filter((line) => line.needsFlavor || line.needsOption) ?? []
+    const missingFlavors = lines?.filter((line) => line.needsFlavor || line.needsOption || line.belowMinimum) ?? []
     if (missingFlavors.length) {
       setShowFlavorErrors(true)
       document.getElementById(lineId(missingFlavors[0]))?.focus()
@@ -234,13 +234,16 @@ function OrderLineRow({ line, showErrors }: { line: OrderLine; showErrors: boole
   const hintId = `${lineId(line)}-hint`
   const showError = showErrors && line.needsFlavor
   const showOptionError = showErrors && line.needsOption
+  const showMinimumError = showErrors && line.belowMinimum
+  // e.g. "tartlets" when an option is chosen, otherwise the item, e.g. "madeleines".
+  const unit = (line.option ?? item.name).toLowerCase()
 
   return (
     <li
       id={lineId(line)}
       tabIndex={-1}
       aria-describedby={flavors.length ? hintId : undefined}
-      className={cn('flex scroll-mt-28 flex-col gap-3 p-4 outline-none', (showError || showOptionError) && 'bg-destructive/5')}
+      className={cn('flex scroll-mt-28 flex-col gap-3 p-4 outline-none', (showError || showOptionError || showMinimumError) && 'bg-destructive/5')}
     >
       <div className="flex items-start gap-4">
         <div className="relative size-16 shrink-0 overflow-hidden rounded-xl bg-muted">
@@ -249,7 +252,6 @@ function OrderLineRow({ line, showErrors }: { line: OrderLine; showErrors: boole
         <div className="flex min-w-0 flex-1 flex-col">
           <p className="text-lg font-semibold leading-snug">{item.name}</p>
           <p className="text-base italic text-muted-foreground">{item.price}</p>
-          {item.orderNote ? <p className="mt-1 text-sm font-semibold text-rouge">{item.orderNote}</p> : null}
         </div>
         <button
           type="button"
@@ -267,7 +269,7 @@ function OrderLineRow({ line, showErrors }: { line: OrderLine; showErrors: boole
           <fieldset className="flex flex-col gap-2">
             <legend className="mb-2 text-sm text-muted-foreground">Choose one:</legend>
             <div className="flex flex-wrap gap-2">
-              {item.options.map((option) => (
+              {item.options.map(({ name: option }) => (
                 <label
                   key={option}
                   className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-base transition-colors has-checked:border-rouge has-checked:bg-blush has-checked:font-semibold has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring"
@@ -286,7 +288,7 @@ function OrderLineRow({ line, showErrors }: { line: OrderLine; showErrors: boole
             </div>
             {showOptionError ? (
               <p role="alert" className="text-sm font-semibold text-destructive">
-                Please choose one: {item.options.join(' or ')}.
+                Please choose one: {item.options.map((option) => option.name).join(' or ')}.
               </p>
             ) : null}
           </fieldset>
@@ -320,6 +322,15 @@ function OrderLineRow({ line, showErrors }: { line: OrderLine; showErrors: boole
             <QuantityStepper label={item.name} value={quantity} min={1} onChange={(next) => setQuantity(item.id, next)} />
           </div>
         )}
+        {/* Only while it applies: the chosen option's (or item's) minimum, until the total reaches it. */}
+        {line.belowMinimum ? (
+          <p
+            role={showMinimumError ? 'alert' : 'status'}
+            className={cn('text-sm font-semibold', showMinimumError ? 'text-destructive' : 'text-rouge')}
+          >
+            Minimum {line.minimum} {unit} per order{line.count > 0 ? ` (you have ${line.count})` : ''}.
+          </p>
+        ) : null}
       </div>
     </li>
   )

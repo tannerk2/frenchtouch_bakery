@@ -147,7 +147,7 @@ export function MenuEditor() {
 }
 
 function emptyItem(group: MenuGroupKey): MenuItem {
-  return { id: createId(), group, name: '', description: '', price: '', image: '', alt: '', flavors: [], options: [], orderNote: '' }
+  return { id: createId(), group, name: '', description: '', price: '', image: '', alt: '', flavors: [], options: [], minimum: 0 }
 }
 
 function MenuItemForm({
@@ -161,7 +161,9 @@ function MenuItemForm({
 }) {
   const [item, setItem] = useState(initial)
   const [flavors, setFlavors] = useState(() => toDrafts(initial.flavors))
-  const [options, setOptions] = useState(() => toDrafts(initial.options))
+  const [options, setOptions] = useState<EntryDraft[]>(() =>
+    initial.options.map((option) => ({ key: createId(), name: option.name, minimum: option.minimum })),
+  )
   const update = (patch: Partial<MenuItem>) => setItem((current) => ({ ...current, ...patch }))
   const prefix = `menu-${item.id}`
 
@@ -183,8 +185,12 @@ function MenuItemForm({
       name: item.name.trim(),
       alt: item.alt.trim() || item.name.trim(),
       flavors: uniqueFlavors(flavorNames),
-      options: uniqueFlavors(optionNames),
-      orderNote: item.orderNote.trim(),
+      options: uniqueFlavors(optionNames).map((name) => ({
+        name,
+        minimum: Math.max(0, Math.round(options.find((option) => option.name.trim() === name)?.minimum ?? 0)),
+      })),
+      // With options, each option carries its own minimum instead.
+      minimum: optionNames.length ? 0 : Math.max(0, Math.round(item.minimum)),
     })
   }
 
@@ -254,26 +260,32 @@ function MenuItemForm({
 
       <EntryList
         legend="Options (optional)"
-        hint="If customers must pick one choice for the whole item, like Tart or Tartlets, list the choices here. Leave empty otherwise."
+        hint="If customers must pick one choice for the whole item, like Tart or Tartlets, list the choices here. Set a minimum for an option (e.g. Tartlets: 6) or leave it at 0 for none."
         noun="option"
-        placeholder="e.g. Tartlets (minimum 6)"
+        placeholder="e.g. Tartlets"
         entries={options}
         onChange={setOptions}
+        withMinimum
       />
 
-      <Field
-        label="Order reminder (optional)"
-        htmlFor={`${prefix}-order-note`}
-        hint="Shown with this item on the Order page, e.g. a minimum quantity."
-      >
-        <Input
-          id={`${prefix}-order-note`}
-          placeholder="e.g. Minimum 12 madeleines"
-          value={item.orderNote}
-          onChange={(e) => update({ orderNote: e.target.value })}
-          className="bg-card text-base"
-        />
-      </Field>
+      {names(options).length === 0 ? (
+        <Field
+          label="Minimum quantity (optional)"
+          htmlFor={`${prefix}-minimum`}
+          hint="Customers are reminded on the Order page and can't send fewer than this. Leave at 0 for no minimum."
+        >
+          <Input
+            id={`${prefix}-minimum`}
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={999}
+            value={item.minimum}
+            onChange={(e) => update({ minimum: Number.parseInt(e.target.value, 10) || 0 })}
+            className="w-32 bg-card text-base"
+          />
+        </Field>
+      ) : null}
 
       <div className="grid gap-5 md:grid-cols-2">
         <div className="flex flex-col gap-2">
@@ -302,7 +314,7 @@ function MenuItemForm({
   )
 }
 
-type EntryDraft = { key: string; name: string }
+type EntryDraft = { key: string; name: string; minimum?: number }
 
 const toDrafts = (entries: string[]): EntryDraft[] => entries.map((name) => ({ key: createId(), name }))
 const names = (drafts: EntryDraft[]) => drafts.map((draft) => draft.name.trim()).filter(Boolean)
@@ -317,6 +329,7 @@ function EntryList({
   placeholder,
   entries,
   onChange,
+  withMinimum = false,
 }: {
   legend: string
   hint: string
@@ -324,13 +337,15 @@ function EntryList({
   placeholder: string
   entries: EntryDraft[]
   onChange: (entries: EntryDraft[]) => void
+  // Options can each have a minimum order quantity.
+  withMinimum?: boolean
 }) {
   const [focusKey, setFocusKey] = useState<string | null>(null)
   const label = noun[0].toUpperCase() + noun.slice(1)
 
   function addEntry() {
     const key = createId()
-    onChange([...entries, { key, name: '' }])
+    onChange([...entries, { key, name: '', ...(withMinimum ? { minimum: 0 } : {}) }])
     setFocusKey(key)
   }
 
@@ -358,6 +373,27 @@ function EntryList({
                 }}
                 className="bg-card text-base"
               />
+              {withMinimum ? (
+                <label className="flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground">
+                  Min
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    max={999}
+                    aria-label={`Minimum for ${entry.name || `${label} ${index + 1}`}`}
+                    value={entry.minimum ?? 0}
+                    onChange={(e) =>
+                      onChange(
+                        entries.map((other) =>
+                          other.key === entry.key ? { ...other, minimum: Number.parseInt(e.target.value, 10) || 0 } : other,
+                        ),
+                      )
+                    }
+                    className="w-20 bg-card text-base"
+                  />
+                </label>
+              ) : null}
               <Button
                 type="button"
                 variant="ghost"
