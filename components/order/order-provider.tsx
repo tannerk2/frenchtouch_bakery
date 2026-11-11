@@ -25,6 +25,9 @@ export type OrderLine = {
   // minimum when it has no options (0 = none).
   count: number
   minimum: number
+  // For items with flavors the minimum applies to each chosen flavor on its own (6 tartlets of one
+  // flavor, not 3 + 3); these are the chosen flavors still under it.
+  shortFlavors: string[]
   belowMinimum: boolean
 }
 
@@ -140,7 +143,10 @@ export function useOrderLines(): OrderLine[] | null {
           needsOption: item.options.length > 0 && option === null,
           count,
           minimum,
-          belowMinimum: minimum > 0 && count < minimum,
+          shortFlavors: minimum > 0 ? flavors.filter((f) => f.quantity > 0 && f.quantity < minimum).map((f) => f.name) : [],
+          belowMinimum:
+            minimum > 0 &&
+            (flavors.length ? flavors.some((f) => f.quantity > 0 && f.quantity < minimum) : count < minimum),
         },
       ]
     })

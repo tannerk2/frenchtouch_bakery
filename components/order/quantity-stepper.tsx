@@ -9,11 +9,14 @@ export function QuantityStepper({
   label,
   value,
   min,
+  snapTo = 0,
   onChange,
 }: {
   label: string
   value: number
   min: number
+  // A per-flavor minimum: + from 0 jumps straight to it and − below it goes back to 0 (buttons only).
+  snapTo?: number
   onChange: (quantity: number) => void
 }) {
   return (
@@ -27,7 +30,7 @@ export function QuantityStepper({
     >
       <button
         type="button"
-        onClick={() => onChange(value - 1)}
+        onClick={() => onChange(snapTo > 0 && value <= snapTo ? 0 : value - 1)}
         disabled={value <= min}
         className="inline-flex size-9 items-center justify-center rounded-full hover:bg-muted disabled:opacity-40"
       >
@@ -51,7 +54,7 @@ export function QuantityStepper({
       />
       <button
         type="button"
-        onClick={() => onChange(value + 1)}
+        onClick={() => onChange(snapTo > 0 && value === 0 ? snapTo : value + 1)}
         disabled={value >= MAX_QUANTITY}
         className="inline-flex size-9 items-center justify-center rounded-full hover:bg-muted disabled:opacity-40"
       >

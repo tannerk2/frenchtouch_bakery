@@ -310,6 +310,7 @@ function OrderLineRow({ line, showErrors }: { line: OrderLine; showErrors: boole
                     label={`${flavor.name} (${item.name})`}
                     value={flavor.quantity}
                     min={0}
+                    snapTo={line.minimum}
                     onChange={(next) => setFlavorQuantity(item.id, flavor.name, next)}
                   />
                 </li>
@@ -322,13 +323,26 @@ function OrderLineRow({ line, showErrors }: { line: OrderLine; showErrors: boole
             <QuantityStepper label={item.name} value={quantity} min={1} onChange={(next) => setQuantity(item.id, next)} />
           </div>
         )}
-        {/* Only while it applies: the chosen option's (or item's) minimum, until the total reaches it. */}
-        {line.belowMinimum ? (
+        {/* Minimums only show while they apply (e.g. Tartlets chosen, not Tart). With flavors, each chosen
+            flavor must reach the minimum on its own. */}
+        {line.minimum > 0 && flavors.length ? (
           <p
             role={showMinimumError ? 'alert' : 'status'}
             className={cn('text-sm font-semibold', showMinimumError ? 'text-destructive' : 'text-rouge')}
           >
-            Minimum {line.minimum} {unit} per order{line.count > 0 ? ` (you have ${line.count})` : ''}.
+            {line.shortFlavors.length
+              ? `At least ${line.minimum} ${unit} per flavor: ${line.shortFlavors
+                  .map((name) => `${name} has ${flavors.find((f) => f.name === name)?.quantity}`)
+                  .join(', ')}.`
+              : `${unit[0].toUpperCase()}${unit.slice(1)} come in at least ${line.minimum} per flavor.`}
+          </p>
+        ) : null}
+        {line.minimum > 0 && !flavors.length && line.belowMinimum ? (
+          <p
+            role={showMinimumError ? 'alert' : 'status'}
+            className={cn('text-sm font-semibold', showMinimumError ? 'text-destructive' : 'text-rouge')}
+          >
+            Minimum {line.minimum} {unit} per order (you have {line.count}).
           </p>
         ) : null}
       </div>

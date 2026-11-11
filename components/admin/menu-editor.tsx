@@ -260,7 +260,7 @@ function MenuItemForm({
 
       <EntryList
         legend="Options (optional)"
-        hint="If customers must pick one choice for the whole item, like Tart or Tartlets, list the choices here. Set a minimum for an option (e.g. Tartlets: 6) or leave it at 0 for none."
+        hint="If customers must pick one choice for the whole item, like Tart or Tartlets, list the choices here. Set a minimum for an option (e.g. Tartlets: 6) or leave it at 0 for none. With flavors, the minimum applies to each flavor."
         noun="option"
         placeholder="e.g. Tartlets"
         entries={options}
@@ -272,7 +272,7 @@ function MenuItemForm({
         <Field
           label="Minimum quantity (optional)"
           htmlFor={`${prefix}-minimum`}
-          hint="Customers are reminded on the Order page and can't send fewer than this. Leave at 0 for no minimum."
+          hint="Customers can't send fewer than this. With flavors, it applies to each flavor (e.g. 12 of each). Leave at 0 for no minimum."
         >
           <Input
             id={`${prefix}-minimum`}
